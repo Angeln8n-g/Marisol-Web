@@ -1,0 +1,8 @@
+export { Navbar } from './Navbar'
+export { HeroSection } from './HeroSection'
+export { AboutSection } from './AboutSection'
+export { ServicesSection } from './ServicesSection'
+export { BeforeAfterSlider } from './BeforeAfterSlider'
+export { Footer } from './Footer'
+export { WhatsAppButton } from './WhatsAppButton'
+export { AppointmentForm } from './AppointmentForm'
