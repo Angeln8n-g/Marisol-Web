@@ -19,6 +19,9 @@ export const LoginPage: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Detectar si la sesión expiró
+  const sessionExpired = searchParams.get('expired') === 'true'
+
   const {
     register,
     handleSubmit,
@@ -35,9 +38,13 @@ export const LoginPage: React.FC = () => {
     try {
       await signIn(data.email, data.password)
       const redirect = searchParams.get('redirect') || '/admin/dashboard'
-      navigate(redirect)
-    } catch {
-      setLoginError('Credenciales inválidas')
+      navigate(redirect, { replace: true })
+    } catch (err) {
+      if (err instanceof Error) {
+        setLoginError(err.message)
+      } else {
+        setLoginError('Error al iniciar sesión. Intenta de nuevo.')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -54,6 +61,20 @@ export const LoginPage: React.FC = () => {
             Panel Administrativo
           </p>
         </div>
+
+        {sessionExpired && (
+          <div className="mb-6 p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-800 font-montserrat">
+            <div className="flex items-start gap-2">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="font-semibold">Sesión expirada</p>
+                <p className="text-xs mt-1">Por favor, inicia sesión nuevamente.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
           <h2 className="text-xl font-playfair text-navy mb-6">

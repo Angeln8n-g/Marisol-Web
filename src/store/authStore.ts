@@ -29,7 +29,7 @@ interface AuthState {
  * Store de autenticación global usando Zustand.
  * 
  * Gestiona el estado de sesión JWT, usuario autenticado y roles.
- * La sesión se persiste en localStorage para mantener el login entre recargas.
+ * Solo la sesión se persiste en localStorage (optimizado).
  * 
  * @example
  * const { user, isAuthenticated, setSession } = useAuthStore()
@@ -66,7 +66,8 @@ export const useAuthStore = create<AuthState>()(
       // Helpers
       isAuthenticated: () => {
         const state = get()
-        return !!(state.session && state.user)
+        // Permitir autenticación solo con sesión (el perfil puede cargarse después)
+        return !!state.session
       },
       
       hasRole: (role: UserRole) => {
@@ -81,10 +82,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({
+      // Solo persistir la sesión, no el perfil completo (optimización)
+      partialize: (state) => ({ 
         session: state.session,
-        user: state.user,
-        supabaseUser: state.supabaseUser,
       }),
     }
   )

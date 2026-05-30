@@ -1,11 +1,43 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { LoginPage, DashboardPage, AppointmentsPage, PatientsPage, MedicalRecordsPage, ProceduresPage, PricingPage, ClinicsPage } from '../pages/admin'
+import { LoginPage } from '../pages/admin'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminLayout } from '../components/admin/layout'
 
+// Lazy loading de páginas admin para mejor rendimiento
+const DashboardPage = lazy(() => import('../pages/admin/DashboardPage').then(m => ({ default: m.DashboardPage })))
+const AppointmentsPage = lazy(() => import('../pages/admin/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })))
+const PatientsPage = lazy(() => import('../pages/admin/PatientsPage').then(m => ({ default: m.PatientsPage })))
+const MedicalRecordsPage = lazy(() => import('../pages/admin/MedicalRecordsPage').then(m => ({ default: m.MedicalRecordsPage })))
+const ProceduresPage = lazy(() => import('../pages/admin/ProceduresPage').then(m => ({ default: m.ProceduresPage })))
+const PricingPage = lazy(() => import('../pages/admin/PricingPage').then(m => ({ default: m.PricingPage })))
+const ClinicsPage = lazy(() => import('../pages/admin/ClinicsPage').then(m => ({ default: m.ClinicsPage })))
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen bg-cream flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3">
+      <svg
+        className="animate-spin h-8 w-8 text-gold"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+      </svg>
+      <span className="text-sm text-gray-600 font-montserrat">Cargando...</span>
+    </div>
+  </div>
+)
+
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
   <ProtectedRoute>
-    <AdminLayout>{children}</AdminLayout>
+    <AdminLayout>
+      <Suspense fallback={<PageLoader />}>
+        {children}
+      </Suspense>
+    </AdminLayout>
   </ProtectedRoute>
 )
 

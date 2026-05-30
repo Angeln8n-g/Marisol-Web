@@ -7,9 +7,13 @@ import { AuthListener } from './hooks/useAuth'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000, // 5 minutos
+      gcTime: 10 * 60 * 1000, // 10 minutos (antes cacheTime)
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      // Optimización: no refetch automático en mount si hay datos frescos
+      refetchOnMount: false,
     },
   },
 })

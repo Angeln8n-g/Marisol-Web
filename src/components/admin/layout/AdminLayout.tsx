@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import { useSessionTimeout } from '../../../hooks/useSessionTimeout'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -8,6 +9,9 @@ interface AdminLayoutProps {
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  
+  // Monitorear timeout de sesión
+  useSessionTimeout()
 
   return (
     <div className="min-h-screen bg-cream flex">
@@ -23,3 +27,4 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClinics } from '../../hooks/useClinics'
 import { useProcedures } from '../../hooks/useProcedures'
@@ -16,6 +16,15 @@ import { PatientAnalytics } from '../../components/admin/dashboard/widgets/Patie
 import { ProcedurePopularity } from '../../components/admin/dashboard/widgets/ProcedurePopularity'
 import { exportToCSV } from '../../lib/exportUtils'
 import type { ClinicWorkload } from '../../types'
+
+// Memoizar componentes pesados para mejor rendimiento
+const MemoizedStatsCards = memo(StatsCards)
+const MemoizedAppointmentsChart = memo(AppointmentsChart)
+const MemoizedAlertsPanel = memo(AlertsPanel)
+const MemoizedClinicWorkloadChart = memo(ClinicWorkloadChart)
+const MemoizedRevenueWidget = memo(RevenueWidget)
+const MemoizedPatientAnalytics = memo(PatientAnalytics)
+const MemoizedProcedurePopularity = memo(ProcedurePopularity)
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
@@ -54,16 +63,20 @@ export const DashboardPage: React.FC = () => {
     load()
   }, [calculateClinicWorkloads])
 
-  const today = new Date()
-  const overdueRecords = generateFollowupAlerts(records, -1).filter((r) => {
-    if (!r.next_followup_date) return false
-    return new Date(r.next_followup_date) < today
-  })
-  const upcomingRecords = generateFollowupAlerts(records, 3).filter((r) => {
-    if (!r.next_followup_date) return false
-    const d = new Date(r.next_followup_date)
-    return d >= today
-  })
+  // Memoizar cálculos de alertas
+  const { overdueRecords, upcomingRecords } = useMemo(() => {
+    const today = new Date()
+    const overdue = generateFollowupAlerts(records, -1).filter((r) => {
+      if (!r.next_followup_date) return false
+      return new Date(r.next_followup_date) < today
+    })
+    const upcoming = generateFollowupAlerts(records, 3).filter((r) => {
+      if (!r.next_followup_date) return false
+      const d = new Date(r.next_followup_date)
+      return d >= today
+    })
+    return { overdueRecords: overdue, upcomingRecords: upcoming }
+  }, [records])
 
   const handleExport = () => {
     const exportData = [
@@ -75,7 +88,8 @@ export const DashboardPage: React.FC = () => {
     exportToCSV(exportData, `dashboard-${new Date().toISOString().split('T')[0]}`)
   }
 
-  const stats = [
+  // Memoizar stats para evitar recálculos innecesarios
+  const stats = useMemo(() => [
     {
       label: 'Citas',
       value: appointmentsData?.totalAppointments || '—',
@@ -104,22 +118,25 @@ export const DashboardPage: React.FC = () => {
       color: 'bg-purple-50 text-purple-700 border-purple-200',
       onClick: () => navigate('/admin/appointments'),
     },
-  ]
+  ], [appointmentsData, revenueData, overdueRecords.length, upcomingRecords.length, navigate])
 
-  const chartData = appointmentsData?.appointmentsByDay
-    ? (() => {
-        const maxCount = Math.max(...appointmentsData.appointmentsByDay.map((d) => d.count), 1)
-        return appointmentsData.appointmentsByDay.map((day) => ({
-          label: new Date(day.date).toLocaleDateString('es-DO', { weekday: 'short' }),
-          count: day.count,
-          percentage: Math.round((day.count / maxCount) * 100),
-        }))
-      })()
-    : Array.from({ length: 6 }, (_, i) => ({
+  // Memoizar datos del gráfico
+  const chartData = useMemo(() => {
+    if (!appointmentsData?.appointmentsByDay) {
+      return Array.from({ length: 6 }, (_, i) => ({
         label: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][i],
         count: 0,
         percentage: 0,
       }))
+    }
+    
+    const maxCount = Math.max(...appointmentsData.appointmentsByDay.map((d) => d.count), 1)
+    return appointmentsData.appointmentsByDay.map((day) => ({
+      label: new Date(day.date).toLocaleDateString('es-DO', { weekday: 'short' }),
+      count: day.count,
+      percentage: Math.round((day.count / maxCount) * 100),
+    }))
+  }, [appointmentsData])
 
   return (
     <div className="space-y-6">
@@ -148,16 +165,16 @@ export const DashboardPage: React.FC = () => {
         onFilterChange={setFilters}
       />
 
-      <StatsCards stats={stats} isLoading={appointmentsLoading || revenueLoading} />
+      <MemoizedStatsCards stats={stats} isLoading={appointmentsLoading || revenueLoading} />
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <AppointmentsChart
+        <MemoizedAppointmentsChart
           data={chartData}
           period={chartPeriod}
           onPeriodChange={setChartPeriod}
           isLoading={appointmentsLoading}
         />
-        <AlertsPanel
+        <MemoizedAlertsPanel
           records={records}
           overdueRecords={overdueRecords}
           upcomingRecords={upcomingRecords}
@@ -166,12 +183,12 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <RevenueWidget />
-        <PatientAnalytics />
-        <ProcedurePopularity />
+        <MemoizedRevenueWidget />
+        <MemoizedPatientAnalytics />
+        <MemoizedProcedurePopularity />
       </div>
 
-      <ClinicWorkloadChart workloads={workloads} />
+      <MemoizedClinicWorkloadChart workloads={workloads} />
     </div>
   )
 }
