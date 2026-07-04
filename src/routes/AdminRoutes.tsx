@@ -12,6 +12,9 @@ const MedicalRecordsPage = lazy(() => import('../pages/admin/MedicalRecordsPage'
 const ProceduresPage = lazy(() => import('../pages/admin/ProceduresPage').then(m => ({ default: m.ProceduresPage })))
 const PricingPage = lazy(() => import('../pages/admin/PricingPage').then(m => ({ default: m.PricingPage })))
 const ClinicsPage = lazy(() => import('../pages/admin/ClinicsPage').then(m => ({ default: m.ClinicsPage })))
+const LocationsPage = lazy(() => import('../pages/admin/LocationsPage').then(m => ({ default: m.LocationsPage })))
+const NewLocationPage = lazy(() => import('../pages/admin/NewLocationPage').then(m => ({ default: m.NewLocationPage })))
+const EditLocationPage = lazy(() => import('../pages/admin/EditLocationPage').then(m => ({ default: m.EditLocationPage })))
 
 // Loading fallback component
 const PageLoader = () => (
@@ -51,5 +54,8 @@ export const AdminRoutes = () => (
     <Route path="procedures" element={<ProtectedLayout><ProceduresPage /></ProtectedLayout>} />
     <Route path="pricing" element={<ProtectedLayout><PricingPage /></ProtectedLayout>} />
     <Route path="clinics" element={<ProtectedLayout><ClinicsPage /></ProtectedLayout>} />
+    <Route path="locations" element={<ProtectedLayout><LocationsPage /></ProtectedLayout>} />
+    <Route path="locations/new" element={<ProtectedLayout><NewLocationPage /></ProtectedLayout>} />
+    <Route path="locations/:id/edit" element={<ProtectedLayout><EditLocationPage /></ProtectedLayout>} />
   </Routes>
 )

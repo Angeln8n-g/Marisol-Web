@@ -27,6 +27,30 @@ export type Currency = 'DOP' | 'USD' | 'EUR'
 
 // ─── Entidades de Base de Datos ──────────────────────────────────────────────
 
+export interface DayHours {
+  open: string // HH:mm format
+  close: string // HH:mm format
+  closed: boolean
+}
+
+export interface OperatingHours {
+  monday: DayHours
+  tuesday: DayHours
+  wednesday: DayHours
+  thursday: DayHours
+  friday: DayHours
+  saturday: DayHours
+  sunday: DayHours
+}
+
+export interface SpecialHour {
+  date: string // YYYY-MM-DD format
+  reason: string
+  open?: string // HH:mm format
+  close?: string // HH:mm format
+  closed: boolean
+}
+
 export interface Clinic {
   id: string
   name: string
@@ -35,8 +59,38 @@ export interface Clinic {
   longitude: number
   phone: string
   whatsapp: string
+  operating_hours: OperatingHours
+  special_hours: SpecialHour[]
   is_active: boolean
+  is_deleted: boolean
   created_at: string
+  updated_at: string
+}
+
+export interface ClinicWithAvailability extends Clinic {
+  available_slots_30d: number
+  available_slots_7d: number
+  has_availability: boolean
+  is_open_now: boolean
+}
+
+export interface GeocodingResult {
+  latitude: number
+  longitude: number
+  formatted_address: string
+  confidence: 'high' | 'medium' | 'low'
+}
+
+export interface AvailabilityQuery {
+  clinic_id: string
+  start_date: string
+  end_date: string
+}
+
+export interface AvailabilityResult {
+  clinic_id: string
+  available_slots: number
+  next_available_date: string | null
 }
 
 export interface Patient {
@@ -225,6 +279,8 @@ export interface CreateClinicDTO {
   longitude: number
   phone: string
   whatsapp: string
+  operating_hours: OperatingHours
+  special_hours?: SpecialHour[]
 }
 
 export interface UpdateClinicDTO {
@@ -234,6 +290,8 @@ export interface UpdateClinicDTO {
   longitude?: number
   phone?: string
   whatsapp?: string
+  operating_hours?: OperatingHours
+  special_hours?: SpecialHour[]
   is_active?: boolean
 }
 
@@ -292,8 +350,8 @@ export interface Database {
     Tables: {
       clinics: {
         Row: Clinic
-        Insert: Omit<Clinic, 'id' | 'created_at'>
-        Update: Partial<Omit<Clinic, 'id' | 'created_at'>>
+        Insert: Omit<Clinic, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Clinic, 'id' | 'created_at' | 'updated_at'>>
       }
       patients: {
         Row: Patient

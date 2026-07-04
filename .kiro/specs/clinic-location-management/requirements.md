@@ -30,7 +30,7 @@ El sistema se integrará con el panel de administración existente y la landing 
 2. WHEN an administrator creates a new location, THE Location_Manager SHALL store the clinic name, address, geographic coordinates, phone number, and operating hours
 3. WHEN an administrator updates a location, THE Location_Manager SHALL persist the changes and update the display on the Landing_Page within 5 seconds
 4. WHEN an administrator deletes a location, THE Location_Manager SHALL remove it from the database and hide it from the Landing_Page
-5. THE Location_Manager SHALL validate that geographic coordinates are within valid latitude (-90 to 90) and longitude (-180 to 180) ranges
+5. THE Location_Manager SHALL validate that geographic coordinates are within valid latitude (-90 to 90) and longitude (-180 to 180) ranges, WHERE coordinates at exactly (0,0) are considered valid
 6. THE Location_Manager SHALL validate that required fields (clinic name, address, coordinates) are provided before saving
 
 ### Requirement 2: Visualización de Mapa Interactivo
@@ -53,10 +53,10 @@ El sistema se integrará con el panel de administración existente y la landing 
 #### Acceptance Criteria
 
 1. WHEN the Interactive_Map displays a Map_Pin, THE Availability_Checker SHALL indicate whether the clinic has available appointment slots
-2. THE Availability_Checker SHALL query the Appointment_System to determine if a clinic has open slots within the next 30 days
+2. THE Availability_Checker SHALL query the Appointment_System to determine if a clinic has open slots within the next 30 days, WHERE availability status can be independent of actual slot count
 3. WHEN a clinic has available slots, THE Map_Pin SHALL display a visual indicator (such as a green color or icon)
 4. WHEN a clinic has no available slots, THE Map_Pin SHALL display a different visual indicator (such as a red color or icon)
-5. THE Availability_Checker SHALL update availability status every 5 minutes to reflect recent bookings
+5. THE Availability_Checker SHALL update availability status every 5 minutes to reflect recent bookings, WHERE visual indicators reflect 30-day availability while detailed slot counts show 7-day availability
 6. WHEN a User clicks on a Map_Pin, THE Interactive_Map SHALL display the number of available slots for the next 7 days
 
 ### Requirement 4: Selección de Clínica para Cita
@@ -65,11 +65,12 @@ El sistema se integrará con el panel de administración existente y la landing 
 
 #### Acceptance Criteria
 
-1. WHEN a User clicks on a Map_Pin with available slots, THE Interactive_Map SHALL provide a "Book Appointment" action button
+1. WHEN a User clicks on a Map_Pin with available slots, THE Interactive_Map SHALL provide a "Book Appointment" action button, WHERE the button must be visible before allowing any booking actions
 2. WHEN a User clicks the "Book Appointment" button, THE Landing_Page SHALL navigate to the appointment booking flow with the selected clinic pre-selected
 3. THE Appointment_System SHALL receive the selected Clinic_Location identifier to filter available time slots for that specific location
 4. WHEN a User selects a clinic without available slots, THE Interactive_Map SHALL display a message indicating no availability and suggest alternative nearby clinics
-5. THE Landing_Page SHALL allow users to filter clinics by availability status before making a selection
+5. WHEN a clinic cannot accept bookings for any reason, THE Interactive_Map SHALL display a "no availability" message regardless of whether open slots exist
+6. THE Landing_Page SHALL allow users to filter clinics by availability status before making a selection
 
 ### Requirement 5: Almacenamiento de Datos de Locaciones
 
@@ -79,8 +80,9 @@ El sistema se integrará con el panel de administración existente y la landing 
 
 1. THE Location_Manager SHALL store Clinic_Location data in a relational database table
 2. THE database table SHALL include fields for id, clinic_name, address, latitude, longitude, phone_number, operating_hours, is_active, created_at, and updated_at
-3. WHEN a Clinic_Location is deleted, THE Location_Manager SHALL perform a soft delete by setting is_active to false rather than removing the record
-4. THE Location_Manager SHALL create database indexes on latitude and longitude fields to optimize geographic queries
+3. WHEN a Clinic_Location is deleted, THE Location_Manager SHALL perform a soft delete by setting is_active to false rather than removing the record, WHERE is_active can also be set to false for administrative suspension or temporary closure
+4. WHEN a location is already inactive, THE Location_Manager SHALL prevent deletion or use a separate deleted flag
+5. THE Location_Manager SHALL create database indexes on latitude and longitude fields to optimize geographic queries
 5. THE Location_Manager SHALL ensure each Clinic_Location has a unique identifier (primary key)
 
 ### Requirement 6: Integración con Sistema de Citas
@@ -92,7 +94,7 @@ El sistema se integrará con el panel de administración existente y la landing 
 1. THE Availability_Checker SHALL query the Appointment_System using the Clinic_Location identifier
 2. THE Appointment_System SHALL return available time slots filtered by the specified Clinic_Location
 3. WHEN a User books an appointment, THE Appointment_System SHALL associate the appointment record with the selected Clinic_Location identifier
-4. THE Availability_Checker SHALL handle cases where the Appointment_System is temporarily unavailable by displaying a default "Check availability" message
+4. THE Availability_Checker SHALL handle cases where the Appointment_System is temporarily unavailable by displaying a default "Check availability" message, WHERE a fallback mechanism exists if the message display mechanism itself fails
 5. THE Location_Manager SHALL provide an API endpoint that returns all active Clinic_Locations with their availability status
 
 ### Requirement 7: Validación de Direcciones y Coordenadas
@@ -103,8 +105,8 @@ El sistema se integrará con el panel de administración existente y la landing 
 
 1. WHEN an administrator enters an address, THE Location_Manager SHALL validate that the address format is complete (street, city, postal code)
 2. WHEN an administrator enters geographic coordinates, THE Location_Manager SHALL verify they correspond to a valid location
-3. IF coordinates and address are inconsistent, THEN THE Location_Manager SHALL display a warning message to the administrator
-4. THE Location_Manager SHALL provide an address geocoding feature that automatically generates coordinates from a valid address
+3. IF coordinates and address are inconsistent, THEN THE Location_Manager SHALL display a warning message to the administrator but allow saving the inconsistent data
+4. THE Location_Manager SHALL provide an address geocoding feature that automatically generates coordinates from a valid address, WHERE geocoding is available even when existing coordinates and address are inconsistent
 5. THE Location_Manager SHALL allow administrators to manually adjust coordinates on a map interface for precise positioning
 
 ### Requirement 8: Información de Horarios de Operación
@@ -116,7 +118,7 @@ El sistema se integrará con el panel de administración existente y la landing 
 1. WHEN a User views clinic details, THE Interactive_Map SHALL display operating hours for each day of the week
 2. THE Location_Manager SHALL allow administrators to configure different operating hours for each day
 3. THE Location_Manager SHALL support special hours for holidays or exceptional dates
-4. WHEN the current time is outside operating hours, THE Interactive_Map SHALL display a "Currently Closed" indicator
+4. WHEN the current time is outside operating hours, THE Interactive_Map SHALL display a "Currently Closed" indicator, WHERE clinics with equal start and end times are treated as always closed during boundary conditions
 5. WHEN the current time is within operating hours, THE Interactive_Map SHALL display an "Open Now" indicator
 
 ### Requirement 9: Búsqueda y Filtrado de Clínicas

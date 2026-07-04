@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navbar, HeroSection, ServicesSection, AboutSection, BeforeAfterSlider, AppointmentForm, Footer, WhatsAppButton } from '../../components/public'
+import { Navbar, HeroSection, ServicesSection, AboutSection, BeforeAfterSlider, InteractiveMap, AppointmentForm, Footer, WhatsAppButton } from '../../components/public'
 
 export const HomePage: React.FC = () => {
   return (
@@ -9,6 +9,7 @@ export const HomePage: React.FC = () => {
       <ServicesSection />
       <AboutSection />
       <BeforeAfterSlider />
+      <InteractiveMap />
       <AppointmentForm />
       <Footer />
       <WhatsAppButton />

@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import type { Clinic } from '../../types'
 
 const appointmentSchema = z.object({
   full_name: z.string().min(1, 'El nombre completo es requerido').max(100),
@@ -15,7 +17,7 @@ const appointmentSchema = z.object({
   preferred_time_slot: z.enum(['morning', 'afternoon'], {
     required_error: 'Selecciona una franja horaria',
   }),
-  clinic_id: z.string().optional(),
+  clinic_id: z.string().min(1, 'Selecciona una clínica').optional(),
 })
 
 type AppointmentFormValues = z.infer<typeof appointmentSchema>
@@ -32,12 +34,20 @@ const services = [
 export const AppointmentForm: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [searchParams] = useSearchParams()
+  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null)
+  const [clinics, setClinics] = useState<Clinic[]>([])
+  const [loadingClinic, setLoadingClinic] = useState(false)
+
+  // Get clinic_id from URL params (e.g., ?clinic_id=xxx)
+  const preSelectedClinicId = searchParams.get('clinic_id')
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<AppointmentFormValues>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -46,9 +56,59 @@ export const AppointmentForm: React.FC = () => {
       service: '',
       preferred_date: '',
       preferred_time_slot: undefined,
-      clinic_id: '',
+      clinic_id: preSelectedClinicId || '',
     },
   })
+
+  // Fetch all active clinics for dropdown
+  useEffect(() => {
+    const fetchClinics = async () => {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_deleted', false)
+        .order('name')
+
+      if (!error && data) {
+        setClinics(data as Clinic[])
+      }
+    }
+
+    fetchClinics()
+  }, [])
+
+  // Fetch pre-selected clinic details if clinic_id is in URL
+  useEffect(() => {
+    const fetchSelectedClinic = async () => {
+      if (!preSelectedClinicId) {
+        setSelectedClinic(null)
+        return
+      }
+
+      setLoadingClinic(true)
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('*')
+        .eq('id', preSelectedClinicId)
+        .eq('is_active', true)
+        .eq('is_deleted', false)
+        .single()
+
+      setLoadingClinic(false)
+
+      if (!error && data) {
+        setSelectedClinic(data as Clinic)
+        setValue('clinic_id', (data as Clinic).id)
+      } else {
+        // If clinic not found or inactive, clear the pre-selection
+        setSelectedClinic(null)
+        setValue('clinic_id', '')
+      }
+    }
+
+    fetchSelectedClinic()
+  }, [preSelectedClinicId, setValue])
 
   const onSubmit = async (data: AppointmentFormValues) => {
     setSubmitError(null)
@@ -57,15 +117,18 @@ export const AppointmentForm: React.FC = () => {
       ? `${data.preferred_date}T09:00:00`
       : `${data.preferred_date}T14:00:00`
 
+    // Use the selected clinic_id or fall back to a default if none selected
+    const clinicId = data.clinic_id || '00000000-0000-0000-0000-000000000000'
+
     const { error } = await supabase.from('appointments').insert({
       patient_id: '00000000-0000-0000-0000-000000000000',
-      clinic_id: data.clinic_id || '00000000-0000-0000-0000-000000000000',
+      clinic_id: clinicId,
       procedure_id: '00000000-0000-0000-0000-000000000000',
       assigned_doctor: null,
       scheduled_at: scheduledAt,
       duration_minutes: 30,
       status: 'pending',
-      notes: `Solicitud pública - Servicio: ${data.service} - Franja: ${data.preferred_time_slot === 'morning' ? 'Mañana' : 'Tarde'} - Nombre: ${data.full_name} - Tel: ${data.phone}`,
+      notes: `Solicitud pública - Servicio: ${data.service} - Franja: ${data.preferred_time_slot === 'morning' ? 'Mañana' : 'Tarde'} - Nombre: ${data.full_name} - Tel: ${data.phone}${selectedClinic ? ` - Clínica: ${selectedClinic.name}` : ''}`,
     } as never)
 
     if (error) {
@@ -75,6 +138,7 @@ export const AppointmentForm: React.FC = () => {
 
     setIsSubmitted(true)
     reset()
+    setSelectedClinic(null)
   }
 
   if (isSubmitted) {
@@ -245,15 +309,74 @@ export const AppointmentForm: React.FC = () => {
 
           <div>
             <label htmlFor="clinic_id" className="block text-sm font-medium text-navy mb-1.5">
-              Clínica Preferida (opcional)
+              Clínica Preferida {preSelectedClinicId ? '*' : '(opcional)'}
             </label>
-            <select
-              id="clinic_id"
-              {...register('clinic_id')}
-              className="w-full px-4 py-2.5 rounded-md border border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold"
-            >
-              <option value="">Sin preferencia</option>
-            </select>
+            
+            {loadingClinic && (
+              <div className="w-full px-4 py-2.5 rounded-md border border-gray-300 bg-gray-50 text-gray-600 text-sm">
+                Cargando información de la clínica...
+              </div>
+            )}
+
+            {selectedClinic && !loadingClinic && (
+              <div className="mb-3 p-4 rounded-md border border-gold bg-gold/5">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <svg className="w-5 h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-navy font-montserrat">{selectedClinic.name}</p>
+                    <p className="text-xs text-gray-600 font-montserrat mt-0.5">{selectedClinic.address}</p>
+                    <p className="text-xs text-gray-600 font-montserrat mt-1">
+                      <span className="font-medium">Tel:</span> {selectedClinic.phone}
+                    </p>
+                  </div>
+                  {!preSelectedClinicId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedClinic(null)
+                        setValue('clinic_id', '')
+                      }}
+                      className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Deseleccionar clínica"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!selectedClinic && !loadingClinic && (
+              <select
+                id="clinic_id"
+                {...register('clinic_id')}
+                className={`w-full px-4 py-2.5 rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-gold focus:border-gold ${
+                  errors.clinic_id ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'
+                }`}
+                onChange={(e) => {
+                  const clinic = clinics.find(c => c.id === e.target.value)
+                  setSelectedClinic(clinic || null)
+                }}
+              >
+                <option value="">Sin preferencia</option>
+                {clinics.map((clinic) => (
+                  <option key={clinic.id} value={clinic.id}>
+                    {clinic.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            
+            {errors.clinic_id && (
+              <p className="mt-1 text-sm text-red-600" role="alert">{errors.clinic_id.message}</p>
+            )}
           </div>
 
           {submitError && (
