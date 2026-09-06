@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Clinic, ClinicWorkload } from '../types'
@@ -10,7 +11,8 @@ export function useClinics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clinics')
-        .select('id, name, address, latitude, longitude, phone, whatsapp, is_active, created_at')
+        .select('id, name, address, latitude, longitude, phone, whatsapp, is_active, is_deleted, created_at')
+        .eq('is_deleted', false)
         .order('name')
         .limit(100)
 
@@ -42,7 +44,27 @@ export function useClinics() {
       if (error) throw error
       return data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clinics'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinics'] })
+      queryClient.invalidateQueries({ queryKey: ['clinic-locations'] })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      // Soft-delete: mark is_deleted = true and is_active = false
+      const { error } = await supabase
+        .from('clinics')
+        .update({ is_deleted: true, is_active: false } as never)
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clinics'] })
+      queryClient.invalidateQueries({ queryKey: ['clinic-locations'] })
+      queryClient.invalidateQueries({ queryKey: ['clinic-availability'] })
+    },
   })
 
   const calculateClinicWorkloads = async (
@@ -118,15 +140,20 @@ export function useClinics() {
     return (data as unknown as { status: string }[])?.length ?? 0
   }
 
+  const clinics = query.data ?? []
+  const activeClinics = useMemo(() => clinics.filter((c) => c.is_active), [clinics])
+
   return {
-    clinics: query.data ?? [],
-    activeClinics: (query.data ?? []).filter((c) => c.is_active),
+    clinics,
+    activeClinics,
     isLoading: query.isLoading,
     isError: query.isError,
     createClinic: createMutation.mutateAsync,
     isCreating: createMutation.isPending,
     updateClinic: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
+    deleteClinic: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
     calculateClinicWorkloads,
     reassignAppointment,
     getClinicWorkload,

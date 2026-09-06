@@ -6,7 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
 -- Create procedures table
-CREATE TABLE procedures (
+CREATE TABLE IF NOT EXISTS procedures (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name              TEXT NOT NULL,
   category          TEXT NOT NULL,
@@ -22,7 +22,7 @@ COMMENT ON COLUMN procedures.duration_minutes IS 'Default duration for schedulin
 COMMENT ON COLUMN procedures.is_active IS 'Soft delete flag - inactive procedures are hidden from UI';
 
 -- Create procedure_prices table with price history
-CREATE TABLE procedure_prices (
+CREATE TABLE IF NOT EXISTS procedure_prices (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   procedure_id    UUID NOT NULL REFERENCES procedures(id) ON DELETE CASCADE,
   price           NUMERIC(10,2) NOT NULL,
@@ -46,8 +46,8 @@ COMMENT ON COLUMN procedure_prices.change_reason IS 'Reason for price change - r
 COMMENT ON CONSTRAINT no_overlapping_prices ON procedure_prices IS 'Ensures no overlapping price periods for the same procedure using btree_gist';
 
 -- Create index for efficient current price lookups
-CREATE INDEX idx_procedure_prices_current ON procedure_prices(procedure_id, effective_from DESC)
+CREATE INDEX IF NOT EXISTS idx_procedure_prices_current ON procedure_prices(procedure_id, effective_from DESC)
   WHERE effective_to IS NULL;
 
 -- Create index for price history queries
-CREATE INDEX idx_procedure_prices_procedure_id ON procedure_prices(procedure_id);
+CREATE INDEX IF NOT EXISTS idx_procedure_prices_procedure_id ON procedure_prices(procedure_id);

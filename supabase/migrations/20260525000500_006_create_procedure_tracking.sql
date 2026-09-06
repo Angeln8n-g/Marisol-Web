@@ -2,7 +2,7 @@
 -- Description: Tracks multi-session procedures with follow-up scheduling and alerts
 -- Requirements: 2.2, 9.4, 16.5
 
-CREATE TABLE procedure_tracking (
+CREATE TABLE IF NOT EXISTS procedure_tracking (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id          UUID NOT NULL REFERENCES patients(id),
   procedure_id        UUID NOT NULL REFERENCES procedures(id),
@@ -34,13 +34,13 @@ COMMENT ON COLUMN procedure_tracking.next_followup_date IS 'Date of next schedul
 COMMENT ON COLUMN procedure_tracking.alert_sent IS 'Flag to prevent duplicate follow-up alerts';
 
 -- Create index for efficient follow-up alert queries
-CREATE INDEX idx_tracking_next_followup ON procedure_tracking(next_followup_date)
+CREATE INDEX IF NOT EXISTS idx_tracking_next_followup ON procedure_tracking(next_followup_date)
   WHERE status NOT IN ('completed', 'cancelled');
 
 -- Create indexes for common queries
-CREATE INDEX idx_tracking_patient_id ON procedure_tracking(patient_id);
-CREATE INDEX idx_tracking_procedure_id ON procedure_tracking(procedure_id);
-CREATE INDEX idx_tracking_status ON procedure_tracking(status);
+CREATE INDEX IF NOT EXISTS idx_tracking_patient_id ON procedure_tracking(patient_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_procedure_id ON procedure_tracking(procedure_id);
+CREATE INDEX IF NOT EXISTS idx_tracking_status ON procedure_tracking(status);
 
 -- Add comments for indexes
 COMMENT ON INDEX idx_tracking_next_followup IS 'Optimizes follow-up alert generation - only indexes active procedures';
@@ -49,8 +49,8 @@ COMMENT ON INDEX idx_tracking_procedure_id IS 'Optimizes queries by procedure ty
 COMMENT ON INDEX idx_tracking_status IS 'Optimizes status-based filtering for active procedures';
 
 -- Create trigger to automatically update updated_at timestamp
+DROP TRIGGER IF EXISTS update_procedure_tracking_updated_at ON procedure_tracking;
 CREATE TRIGGER update_procedure_tracking_updated_at
   BEFORE UPDATE ON procedure_tracking
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
-

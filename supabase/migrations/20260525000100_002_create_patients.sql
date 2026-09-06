@@ -2,7 +2,7 @@
 -- Description: Stores patient demographic and contact information
 -- Requirements: 2.2, 9.4, 16.5
 
-CREATE TABLE patients (
+CREATE TABLE IF NOT EXISTS patients (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name       TEXT NOT NULL,
   email           TEXT UNIQUE,
@@ -27,8 +27,9 @@ BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
+DROP TRIGGER IF EXISTS update_patients_updated_at ON patients;
 CREATE TRIGGER update_patients_updated_at
   BEFORE UPDATE ON patients
   FOR EACH ROW

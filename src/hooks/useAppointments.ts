@@ -32,15 +32,35 @@ export function useAppointments({ filters = {}, page = 0, pageSize = 25 }: UseAp
 
       if (filters.clinicId) query = query.eq('clinic_id', filters.clinicId)
       if (filters.status) query = query.eq('status', filters.status)
-      if (filters.dateFrom) query = query.gte('scheduled_at', filters.dateFrom)
-      if (filters.dateTo) query = query.lte('scheduled_at', filters.dateTo)
+      if (filters.dateFrom) {
+        const fromIso = filters.dateFrom.includes('T') ? filters.dateFrom : `${filters.dateFrom}T00:00:00.000Z`
+        query = query.gte('scheduled_at', fromIso)
+      }
+      if (filters.dateTo) {
+        const toIso = filters.dateTo.includes('T') ? filters.dateTo : `${filters.dateTo}T23:59:59.999Z`
+        query = query.lte('scheduled_at', toIso)
+      }
 
       const { data, error, count } = await query
 
       if (error) throw error
 
+      let appointmentsData = (data || []) as unknown as Appointment[]
+
+      if (filters.searchQuery && filters.searchQuery.trim()) {
+        const sq = filters.searchQuery.toLowerCase().trim()
+        appointmentsData = appointmentsData.filter((apt) => {
+          return (
+            apt.patient?.full_name?.toLowerCase().includes(sq) ||
+            apt.patient?.phone?.includes(sq) ||
+            apt.procedure?.name?.toLowerCase().includes(sq) ||
+            apt.notes?.toLowerCase().includes(sq)
+          )
+        })
+      }
+
       return {
-        data: data as unknown as Appointment[],
+        data: appointmentsData,
         count: count ?? 0,
         hasNextPage: (page + 1) * pageSize < (count ?? 0),
         hasPreviousPage: page > 0,

@@ -2,7 +2,7 @@
 -- Description: Stores appointment scheduling with status tracking and clinic assignment
 -- Requirements: 2.2, 9.4, 16.5
 
-CREATE TABLE appointments (
+CREATE TABLE IF NOT EXISTS appointments (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id        UUID NOT NULL REFERENCES patients(id),
   clinic_id         UUID NOT NULL REFERENCES clinics(id),
@@ -30,10 +30,10 @@ COMMENT ON COLUMN appointments.status IS 'Appointment workflow status - constrai
 COMMENT ON COLUMN appointments.notes IS 'Additional notes or special instructions';
 
 -- Create indexes for efficient queries
-CREATE INDEX idx_appointments_scheduled_at ON appointments(scheduled_at);
-CREATE INDEX idx_appointments_patient_id ON appointments(patient_id);
-CREATE INDEX idx_appointments_clinic_id ON appointments(clinic_id);
-CREATE INDEX idx_appointments_status ON appointments(status);
+CREATE INDEX IF NOT EXISTS idx_appointments_scheduled_at ON appointments(scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_appointments_patient_id ON appointments(patient_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_clinic_id ON appointments(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
 
 -- Add comments for indexes
 COMMENT ON INDEX idx_appointments_scheduled_at IS 'Optimizes calendar view queries and date range filters';
@@ -42,8 +42,8 @@ COMMENT ON INDEX idx_appointments_clinic_id IS 'Optimizes clinic-specific appoin
 COMMENT ON INDEX idx_appointments_status IS 'Optimizes status-based filtering (pending, confirmed, etc.)';
 
 -- Create trigger to automatically update updated_at timestamp
+DROP TRIGGER IF EXISTS update_appointments_updated_at ON appointments;
 CREATE TRIGGER update_appointments_updated_at
   BEFORE UPDATE ON appointments
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
-

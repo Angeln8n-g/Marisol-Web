@@ -87,7 +87,20 @@ export const PatientList: React.FC = () => {
             email: editingPatient.email || '',
             birth_date: editingPatient.birth_date || '',
             gender: editingPatient.gender || undefined,
+            identification_type: editingPatient.identification_type || 'cedula',
+            identification_number: editingPatient.identification_number || '',
+            address: editingPatient.address || '',
+            city: editingPatient.city || '',
+            province: editingPatient.province || '',
+            occupation: editingPatient.occupation || '',
+            civil_status: editingPatient.civil_status || undefined,
+            emergency_contact_name: editingPatient.emergency_contact_name || '',
+            emergency_contact_phone: editingPatient.emergency_contact_phone || '',
+            emergency_contact_relationship: editingPatient.emergency_contact_relationship || '',
+            insurance_provider: editingPatient.insurance_provider || '',
+            insurance_card_number: editingPatient.insurance_card_number || '',
             medical_alerts: editingPatient.medical_alerts || '',
+            medical_history: editingPatient.medical_history || {},
           }}
           onCancel={() => setEditingPatient(null)}
         />

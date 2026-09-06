@@ -3,7 +3,7 @@
 -- Requirements: 2.2, 9.4, 16.5
 
 -- Create medical_records table
-CREATE TABLE medical_records (
+CREATE TABLE IF NOT EXISTS medical_records (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id      UUID NOT NULL REFERENCES patients(id),
   appointment_id  UUID REFERENCES appointments(id),
@@ -28,14 +28,14 @@ COMMENT ON COLUMN medical_records.notes IS 'Additional clinical notes';
 COMMENT ON COLUMN medical_records.record_date IS 'Date of the medical record - defaults to creation time';
 
 -- Create index for efficient patient history queries
-CREATE INDEX idx_medical_records_patient_id ON medical_records(patient_id, record_date DESC);
-CREATE INDEX idx_medical_records_appointment_id ON medical_records(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_medical_records_patient_id ON medical_records(patient_id, record_date DESC);
+CREATE INDEX IF NOT EXISTS idx_medical_records_appointment_id ON medical_records(appointment_id);
 
 COMMENT ON INDEX idx_medical_records_patient_id IS 'Optimizes patient medical history queries with chronological ordering';
 COMMENT ON INDEX idx_medical_records_appointment_id IS 'Optimizes lookup of records associated with specific appointments';
 
 -- Create record_documents table for attachments
-CREATE TABLE record_documents (
+CREATE TABLE IF NOT EXISTS record_documents (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   medical_record_id UUID NOT NULL REFERENCES medical_records(id) ON DELETE CASCADE,
   file_name         TEXT NOT NULL,
@@ -54,7 +54,6 @@ COMMENT ON COLUMN record_documents.file_type IS 'MIME type of the document';
 COMMENT ON COLUMN record_documents.file_size_bytes IS 'File size in bytes for validation and display';
 
 -- Create index for efficient document lookups by medical record
-CREATE INDEX idx_record_documents_medical_record_id ON record_documents(medical_record_id);
+CREATE INDEX IF NOT EXISTS idx_record_documents_medical_record_id ON record_documents(medical_record_id);
 
 COMMENT ON INDEX idx_record_documents_medical_record_id IS 'Optimizes retrieval of all documents for a medical record';
-

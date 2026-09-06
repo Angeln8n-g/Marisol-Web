@@ -27,7 +27,7 @@ export const NewLocationPage: React.FC = () => {
     try {
       setError('')
       await createClinic(data as CreateClinicDTO)
-      navigate('/admin/locations', { 
+      navigate('/admin/clinics', { 
         state: { 
           notification: { 
             type: 'success', 
@@ -41,7 +41,7 @@ export const NewLocationPage: React.FC = () => {
   }
 
   const handleCancel = () => {
-    navigate('/admin/locations')
+    navigate('/admin/clinics')
   }
 
   return (

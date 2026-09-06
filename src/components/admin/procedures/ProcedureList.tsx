@@ -63,6 +63,12 @@ export const ProcedureList: React.FC = () => {
             category: editingProcedure.category,
             description: editingProcedure.description || '',
             duration_minutes: editingProcedure.duration_minutes,
+            clinical_duration_minutes: editingProcedure.clinical_duration_minutes,
+            setup_buffer_minutes: editingProcedure.setup_buffer_minutes,
+            cleanup_buffer_minutes: editingProcedure.cleanup_buffer_minutes,
+            estimated_sessions: editingProcedure.estimated_sessions,
+            min_days_between_sessions: editingProcedure.min_days_between_sessions,
+            requires_previous_cleaning: editingProcedure.requires_previous_cleaning,
           }}
           onCancel={() => setEditingProcedure(null)}
         />
@@ -113,7 +119,23 @@ export const ProcedureList: React.FC = () => {
                   <tr key={proc.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-navy">{proc.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{proc.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{proc.duration_minutes} min</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex flex-col">
+                        <span className="font-medium text-navy">
+                          {proc.clinical_duration_minutes || proc.duration_minutes} min clínicos
+                        </span>
+                        {(proc.setup_buffer_minutes || proc.cleanup_buffer_minutes) ? (
+                          <span className="text-[11px] text-gray-500">
+                            Total sillón: {proc.duration_minutes} min (buffers: +{(proc.setup_buffer_minutes || 0) + (proc.cleanup_buffer_minutes || 0)}m)
+                          </span>
+                        ) : null}
+                        {proc.estimated_sessions && proc.estimated_sessions > 1 ? (
+                          <span className="text-[11px] text-purple-600 font-medium">
+                            {proc.estimated_sessions} sesiones {proc.min_days_between_sessions ? `(c/${proc.min_days_between_sessions}d)` : ''}
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => toggleActive(proc.id, proc.is_active)}

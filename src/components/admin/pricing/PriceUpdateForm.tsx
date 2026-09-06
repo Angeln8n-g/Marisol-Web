@@ -14,8 +14,8 @@ export type PriceUpdateFormValues = z.infer<typeof priceSchema>
 
 interface PriceUpdateFormProps {
   procedureName: string
-  currentPrice: number
-  currentCurrency: string
+  currentPrice?: number | null
+  currentCurrency?: string
   onSubmit: (data: PriceUpdateFormValues) => Promise<void>
   isSubmitting?: boolean
   onCancel?: () => void
@@ -24,11 +24,13 @@ interface PriceUpdateFormProps {
 export const PriceUpdateForm: React.FC<PriceUpdateFormProps> = ({
   procedureName,
   currentPrice,
-  currentCurrency,
+  currentCurrency = 'DOP',
   onSubmit,
   isSubmitting = false,
   onCancel,
 }) => {
+  const isInitialPrice = currentPrice === null || currentPrice === undefined || currentPrice <= 0
+
   const {
     register,
     handleSubmit,
@@ -36,23 +38,35 @@ export const PriceUpdateForm: React.FC<PriceUpdateFormProps> = ({
   } = useForm<PriceUpdateFormValues>({
     resolver: zodResolver(priceSchema),
     defaultValues: {
-      price: currentPrice,
-      currency: currentCurrency as 'DOP' | 'USD' | 'EUR',
+      price: currentPrice && currentPrice > 0 ? currentPrice : undefined,
+      currency: (currentCurrency || 'DOP') as 'DOP' | 'USD' | 'EUR',
       effective_from: new Date().toISOString().split('T')[0],
-      change_reason: '',
+      change_reason: isInitialPrice ? 'Precio inicial fijado al catálogo' : '',
     },
   })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      <p className="text-sm text-gray-600 font-montserrat">
-        Actualizando precio de: <span className="font-semibold text-navy">{procedureName}</span>
-      </p>
+      <div className="bg-sand/30 p-3.5 rounded-lg border border-gold/30">
+        <p className="text-sm text-gray-700 font-montserrat">
+          {isInitialPrice ? (
+            <>Asignando <span className="font-semibold text-gold">precio inicial</span> para: </>
+          ) : (
+            <>Actualizando precio vigente para: </>
+          )}
+          <span className="font-bold text-navy">{procedureName}</span>
+        </p>
+        {!isInitialPrice && currentPrice && (
+          <p className="text-xs text-gray-500 font-montserrat mt-1">
+            Precio actual: <span className="font-semibold text-navy">{currentCurrency} {currentPrice.toLocaleString('es-DO', { minimumFractionDigits: 2 })}</span>
+          </p>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="price" className="block text-sm font-medium text-navy mb-1.5">
-            Nuevo Precio *
+            {isInitialPrice ? 'Precio Inicial *' : 'Nuevo Precio *'}
           </label>
           <input
             id="price"
@@ -128,7 +142,7 @@ export const PriceUpdateForm: React.FC<PriceUpdateFormProps> = ({
           disabled={isSubmitting}
           className="px-6 py-2 bg-gold text-white text-sm font-semibold rounded-md hover:bg-gold/90 transition-colors disabled:opacity-50"
         >
-          {isSubmitting ? 'Actualizando...' : 'Actualizar Precio'}
+          {isSubmitting ? 'Guardando...' : isInitialPrice ? 'Asignar Precio' : 'Actualizar Precio'}
         </button>
       </div>
     </form>

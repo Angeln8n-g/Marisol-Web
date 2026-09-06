@@ -5,14 +5,20 @@ interface ClinicCardProps {
   clinic: Clinic
   onEdit?: () => void
   onToggleActive?: () => void
+  onDelete?: () => void
 }
 
-export const ClinicCard: React.FC<ClinicCardProps> = ({ clinic, onEdit, onToggleActive }) => {
+export const ClinicCard: React.FC<ClinicCardProps> = ({
+  clinic,
+  onEdit,
+  onToggleActive,
+  onDelete,
+}) => {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4">
+    <div className="bg-white rounded-lg border border-gray-200 p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-playfair text-lg text-navy">{clinic.name}</h3>
+          <h3 className="font-playfair text-lg text-navy font-semibold">{clinic.name}</h3>
           <p className="text-xs text-gray-500 font-montserrat mt-0.5">{clinic.address}</p>
         </div>
         <span
@@ -45,7 +51,7 @@ export const ClinicCard: React.FC<ClinicCardProps> = ({ clinic, onEdit, onToggle
         {onEdit && (
           <button
             onClick={onEdit}
-            className="px-3 py-1.5 text-xs font-medium text-gold hover:bg-gold/5 rounded-md transition-colors"
+            className="px-3 py-1.5 text-xs font-semibold text-navy bg-navy/5 hover:bg-navy/10 rounded-md transition-colors"
           >
             Editar
           </button>
@@ -53,13 +59,28 @@ export const ClinicCard: React.FC<ClinicCardProps> = ({ clinic, onEdit, onToggle
         {onToggleActive && (
           <button
             onClick={onToggleActive}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
               clinic.is_active
-                ? 'text-red-600 hover:bg-red-50'
-                : 'text-green-600 hover:bg-green-50'
+                ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+                : 'text-green-700 bg-green-50 hover:bg-green-100'
             }`}
           >
             {clinic.is_active ? 'Desactivar' : 'Activar'}
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={() => {
+              if (window.confirm(`¿Estás seguro de quitar la sede "${clinic.name}"? Los datos históricos de citas y pacientes serán preservados.`)) {
+                onDelete()
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors ml-auto flex items-center gap-1"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Quitar
           </button>
         )}
       </div>

@@ -34,7 +34,7 @@ export const EditLocationPage: React.FC = () => {
     try {
       setError('')
       await updateClinic({ id, data })
-      navigate('/admin/locations', { 
+      navigate('/admin/clinics', { 
         state: { 
           notification: { 
             type: 'success', 
@@ -48,7 +48,7 @@ export const EditLocationPage: React.FC = () => {
   }
 
   const handleCancel = () => {
-    navigate('/admin/locations')
+    navigate('/admin/clinics')
   }
 
   if (isLoading) {

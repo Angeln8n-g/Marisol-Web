@@ -20,20 +20,80 @@ export function usePriceHistory(procedureId: string | null) {
   })
 }
 
+export interface ProcedurePricingItem {
+  id: string | null
+  procedure_id: string
+  price: number | null
+  currency: string
+  effective_from: string | null
+  effective_to: string | null
+  procedure: {
+    id: string
+    name: string
+    category: string
+    description?: string | null
+    duration_minutes: number
+    clinical_duration_minutes?: number
+    is_active: boolean
+  }
+}
+
 export function usePricing() {
   const queryClient = useQueryClient()
 
   const currentPricesQuery = useQuery({
     queryKey: ['pricing', 'current'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('procedure_prices')
-        .select('*, procedure:procedures(*)')
-        .is('effective_to', null)
-        .order('procedure_id')
+    queryFn: async (): Promise<ProcedurePricingItem[]> => {
+      // 1. Fetch all active procedures
+      const { data: procedures, error: procError } = await supabase
+        .from('procedures')
+        .select('*')
+        .order('name', { ascending: true })
 
-      if (error) throw error
-      return data as unknown as (ProcedurePrice & { procedure: { name: string; category: string; is_active: boolean } })[]
+      if (procError) throw procError
+
+      // 2. Fetch current prices (where effective_to is null)
+      const { data: prices, error: priceError } = await supabase
+        .from('procedure_prices')
+        .select('*')
+        .is('effective_to', null)
+
+      if (priceError) throw priceError
+
+      const procList = (procedures || []) as unknown as import('../types').Procedure[]
+      const priceList = (prices || []) as unknown as ProcedurePrice[]
+
+      const priceMap = new Map<string, ProcedurePrice>()
+      priceList.forEach((p) => {
+        priceMap.set(p.procedure_id, p)
+      })
+
+      // 3. Merge procedures with current price (if any)
+      const items: ProcedurePricingItem[] = procList.map((proc) => {
+        const currentPrice = priceMap.get(proc.id)
+        if (currentPrice) {
+          return {
+            id: currentPrice.id,
+            procedure_id: proc.id,
+            price: currentPrice.price,
+            currency: currentPrice.currency,
+            effective_from: currentPrice.effective_from,
+            effective_to: null,
+            procedure: proc,
+          }
+        }
+        return {
+          id: null,
+          procedure_id: proc.id,
+          price: null,
+          currency: 'DOP',
+          effective_from: null,
+          effective_to: null,
+          procedure: proc,
+        }
+      })
+
+      return items
     },
   })
 
@@ -45,16 +105,30 @@ export function usePricing() {
       effective_from: string
       change_reason: string
     }) => {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const closeDate = yesterday.toISOString().split('T')[0]
-
-      const { error: closeError } = await supabase
+      // Check if there is an existing active price
+      const { data: existingPriceData } = await supabase
         .from('procedure_prices')
-        .update({ effective_to: closeDate } as never)
+        .select('id, effective_from')
         .eq('procedure_id', update.procedure_id)
         .is('effective_to', null)
-      if (closeError) throw closeError
+        .maybeSingle()
+
+      const existingPrice = existingPriceData as unknown as { id: string; effective_from: string } | null
+      let closeDate: string | null = null
+
+      if (existingPrice) {
+        // Set close date to the day before effective_from
+        const effDate = new Date(update.effective_from + 'T00:00:00')
+        effDate.setDate(effDate.getDate() - 1)
+        closeDate = effDate.toISOString().split('T')[0]
+
+        const { error: closeError } = await supabase
+          .from('procedure_prices')
+          .update({ effective_to: closeDate } as never)
+          .eq('id', existingPrice.id)
+
+        if (closeError) throw closeError
+      }
 
       const { data: { session } } = await supabase.auth.getSession()
       const changedBy = session?.user?.id ?? null
@@ -66,22 +140,23 @@ export function usePricing() {
           price: update.price,
           currency: update.currency,
           effective_from: update.effective_from,
-          change_reason: update.change_reason,
+          change_reason: update.change_reason || (existingPrice ? 'Ajuste de precio' : 'Precio inicial'),
           changed_by: changedBy,
         } as never)
         .select()
         .single()
 
       if (error) {
-        // Revertir cierre del precio anterior si falla la inserción
-        await supabase
-          .from('procedure_prices')
-          .update({ effective_to: null } as never)
-          .eq('procedure_id', update.procedure_id)
-          .eq('effective_to', closeDate)
+        // Revert previous price close if insert fails
+        if (existingPrice && closeDate) {
+          await supabase
+            .from('procedure_prices')
+            .update({ effective_to: null } as never)
+            .eq('id', existingPrice.id)
+        }
 
         if (error.message?.includes('no_overlapping_prices')) {
-          throw new Error('No se puede actualizar el precio debido a fechas superpuestas')
+          throw new Error('No se puede actualizar el precio debido a fechas superpuestas. Verifica la fecha de vigencia.')
         }
         throw error
       }
@@ -89,11 +164,20 @@ export function usePricing() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pricing'] })
+      queryClient.invalidateQueries({ queryKey: ['procedures'] })
     },
   })
 
+  const currentPrices = currentPricesQuery.data ?? []
+  const totalProcedures = currentPrices.length
+  const pricedCount = currentPrices.filter((p) => p.price !== null).length
+  const unpricedCount = totalProcedures - pricedCount
+
   return {
-    currentPrices: currentPricesQuery.data ?? [],
+    currentPrices,
+    totalProcedures,
+    pricedCount,
+    unpricedCount,
     isLoading: currentPricesQuery.isLoading,
     isError: currentPricesQuery.isError,
     error: currentPricesQuery.error,

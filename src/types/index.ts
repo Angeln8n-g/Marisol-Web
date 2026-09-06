@@ -93,6 +93,26 @@ export interface AvailabilityResult {
   next_available_date: string | null
 }
 
+export interface PatientMedicalHistory {
+  hypertension?: boolean
+  diabetes?: boolean
+  heart_disease?: boolean
+  asthma?: boolean
+  hepatitis?: boolean
+  allergies_penicillin?: boolean
+  allergies_latex?: boolean
+  allergies_anesthesia?: boolean
+  allergies_other?: string
+  current_medications?: string
+  previous_surgeries?: string
+  is_pregnant?: boolean
+  is_breastfeeding?: boolean
+  smoker?: boolean
+  alcohol?: boolean
+  bruxism?: boolean
+  notes?: string
+}
+
 export interface Patient {
   id: string
   full_name: string
@@ -101,6 +121,19 @@ export interface Patient {
   birth_date: string | null
   gender: Gender | null
   medical_alerts: string | null
+  identification_type?: 'cedula' | 'passport' | 'rnc' | 'other'
+  identification_number?: string | null
+  address?: string | null
+  city?: string | null
+  province?: string | null
+  emergency_contact_name?: string | null
+  emergency_contact_phone?: string | null
+  emergency_contact_relationship?: string | null
+  insurance_provider?: string | null
+  insurance_card_number?: string | null
+  occupation?: string | null
+  civil_status?: 'single' | 'married' | 'divorced' | 'widowed' | 'other' | null
+  medical_history?: PatientMedicalHistory | null
   created_at: string
   updated_at: string
 }
@@ -111,6 +144,12 @@ export interface Procedure {
   category: string
   description: string | null
   duration_minutes: number
+  clinical_duration_minutes?: number
+  setup_buffer_minutes?: number
+  cleanup_buffer_minutes?: number
+  estimated_sessions?: number
+  min_days_between_sessions?: number
+  requires_previous_cleaning?: boolean
   is_active: boolean
   created_at: string
   current_price?: ProcedurePrice
@@ -185,6 +224,270 @@ export interface ProcedureTracking {
   procedure?: Procedure
 }
 
+export type InventoryItemType = 'tool' | 'consumable_clinical' | 'consumable_admin' | 'other'
+export type InventoryItemStatus = 'active' | 'in_maintenance' | 'damaged' | 'retired'
+export type MaintenanceType = 'preventive' | 'corrective' | 'calibration'
+export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+
+export interface InventoryCategory {
+  id: string
+  name: string
+  item_type: InventoryItemType
+  description?: string | null
+}
+
+export interface InventoryBatch {
+  id: string
+  item_id: string
+  batch_number: string
+  initial_quantity: number
+  current_quantity: number
+  expiration_date: string
+  received_date: string
+  status: 'active' | 'expired' | 'depleted'
+  created_at: string
+}
+
+export interface InventoryItem {
+  id: string
+  clinic_id?: string | null
+  category_id?: string | null
+  name: string
+  code?: string | null
+  item_type: InventoryItemType
+  unit: string
+  current_stock: number
+  minimum_stock: number
+  cost_price?: number | null
+  brand?: string | null
+  serial_number?: string | null
+  location_room?: string | null
+  status: InventoryItemStatus
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  clinic?: Clinic
+  batches?: InventoryBatch[]
+}
+
+export interface EquipmentMaintenance {
+  id: string
+  item_id: string
+  clinic_id?: string | null
+  maintenance_type: MaintenanceType
+  title: string
+  description?: string | null
+  technician_name: string
+  technician_contact?: string | null
+  status: MaintenanceStatus
+  scheduled_date: string
+  completed_date?: string | null
+  cost: number
+  next_maintenance_date?: string | null
+  findings?: string | null
+  actions_taken?: string | null
+  created_at: string
+  updated_at: string
+  item?: InventoryItem
+}
+
+export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'cancelled'
+export type BillStatus = 'pending' | 'partial' | 'paid' | 'overdue'
+export type BillCategory = 'dental_supplies' | 'dental_lab' | 'utilities' | 'rent' | 'maintenance' | 'marketing' | 'salaries' | 'other'
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'insurance' | 'check' | 'other'
+
+export interface InvoiceItem {
+  id: string
+  invoice_id: string
+  procedure_id?: string | null
+  description: string
+  quantity: number
+  unit_price: number
+  total: number
+}
+
+export interface PaymentReceived {
+  id: string
+  invoice_id: string
+  patient_id: string
+  clinic_id?: string | null
+  amount: number
+  payment_method: PaymentMethod
+  reference_number?: string | null
+  payment_date: string
+  notes?: string | null
+  created_at: string
+}
+
+export interface Invoice {
+  id: string
+  invoice_number: string
+  patient_id: string
+  clinic_id?: string | null
+  appointment_id?: string | null
+  issue_date: string
+  due_date: string
+  subtotal: number
+  discount: number
+  tax: number
+  total: number
+  balance_due: number
+  status: InvoiceStatus
+  notes?: string | null
+  created_at: string
+  updated_at: string
+  patient?: Patient
+  clinic?: Clinic
+  items?: InvoiceItem[]
+  payments?: PaymentReceived[]
+}
+
+export interface PaymentMade {
+  id: string
+  bill_id: string
+  clinic_id?: string | null
+  amount: number
+  payment_method: PaymentMethod
+  reference_number?: string | null
+  payment_date: string
+  notes?: string | null
+  created_at: string
+}
+
+export interface BillPayable {
+  id: string
+  bill_number?: string | null
+  vendor_name: string
+  category: BillCategory
+  clinic_id?: string | null
+  bill_date: string
+  due_date: string
+  subtotal: number
+  tax: number
+  total: number
+  balance_due: number
+  status: BillStatus
+  notes?: string | null
+  attachment_url?: string | null
+  created_at: string
+  updated_at: string
+  clinic?: Clinic
+  payments?: PaymentMade[]
+}
+
+export interface MarketingCampaign {
+  id: string
+  name: string
+  description?: string | null
+  objective: 'leads' | 'brand_awareness' | 'procedure_promotion' | 'retention'
+  status: 'draft' | 'active' | 'paused' | 'completed'
+  start_date: string
+  end_date?: string | null
+  budget: number
+  actual_spend: number
+  created_at: string
+}
+
+export interface MarketingOffer {
+  id: string
+  campaign_id?: string | null
+  procedure_id?: string | null
+  title: string
+  promo_code?: string | null
+  discount_type: 'percentage' | 'fixed_amount'
+  discount_value: number
+  start_date: string
+  end_date?: string | null
+  is_active: boolean
+  redemptions_count: number
+  created_at: string
+  procedure?: Procedure
+}
+
+export interface SocialMediaPost {
+  id: string
+  campaign_id?: string | null
+  title: string
+  platforms: string[]
+  content_copy: string
+  media_url?: string | null
+  scheduled_for?: string | null
+  published_at?: string | null
+  status: 'draft' | 'scheduled' | 'published' | 'archived'
+  notes?: string | null
+  created_at: string
+}
+
+export interface MarketingVoucher {
+  id: string
+  voucher_code: string
+  title: string
+  offer_id?: string | null
+  procedure_id?: string | null
+  patient_id?: string | null
+  beneficiary_name: string
+  beneficiary_phone?: string | null
+  discount_type: 'percentage' | 'fixed_amount'
+  discount_value: number
+  expiration_date: string
+  status: 'active' | 'redeemed' | 'expired' | 'cancelled'
+  redeemed_at?: string | null
+  notes?: string | null
+  terms?: string | null
+  created_at: string
+  updated_at: string
+  patient?: {
+    id: string
+    full_name: string
+    phone?: string | null
+    email?: string | null
+  } | null
+  procedure?: {
+    id: string
+    name: string
+    category: string
+  } | null
+}
+
+export interface ConsentTemplate {
+  id: string
+  procedure_id?: string | null
+  title: string
+  description?: string | null
+  template_content: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SignedConsent {
+  id: string
+  patient_id: string
+  procedure_id?: string | null
+  doctor_id?: string | null
+  doctor_name: string
+  appointment_id?: string | null
+  template_id?: string | null
+  content_rendered: string
+  signature_data_url?: string | null
+  status: 'signed' | 'revoked'
+  signed_at: string
+  created_at: string
+  procedure?: Procedure
+}
+
+export interface AppointmentReminder {
+  id: string
+  appointment_id: string
+  patient_id: string
+  reminder_type: 'whatsapp' | 'email' | 'sms'
+  status: 'pending' | 'sent' | 'failed' | 'confirmed'
+  scheduled_time: string
+  sent_at?: string | null
+  message_content: string
+  created_at: string
+}
+
 export interface User {
   id: string
   email: string
@@ -246,6 +549,19 @@ export interface CreatePatientDTO {
   birth_date?: string
   gender?: Gender
   medical_alerts?: string
+  identification_type?: 'cedula' | 'passport' | 'rnc' | 'other'
+  identification_number?: string
+  address?: string
+  city?: string
+  province?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  emergency_contact_relationship?: string
+  insurance_provider?: string
+  insurance_card_number?: string
+  occupation?: string
+  civil_status?: 'single' | 'married' | 'divorced' | 'widowed' | 'other'
+  medical_history?: PatientMedicalHistory
 }
 
 export interface UpdatePatientDTO {
@@ -255,6 +571,19 @@ export interface UpdatePatientDTO {
   birth_date?: string
   gender?: Gender
   medical_alerts?: string
+  identification_type?: 'cedula' | 'passport' | 'rnc' | 'other'
+  identification_number?: string
+  address?: string
+  city?: string
+  province?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  emergency_contact_relationship?: string
+  insurance_provider?: string
+  insurance_card_number?: string
+  occupation?: string
+  civil_status?: 'single' | 'married' | 'divorced' | 'widowed' | 'other'
+  medical_history?: PatientMedicalHistory
 }
 
 export interface CreateProcedureDTO {
@@ -262,6 +591,12 @@ export interface CreateProcedureDTO {
   category: string
   description?: string
   duration_minutes: number
+  clinical_duration_minutes?: number
+  setup_buffer_minutes?: number
+  cleanup_buffer_minutes?: number
+  estimated_sessions?: number
+  min_days_between_sessions?: number
+  requires_previous_cleaning?: boolean
 }
 
 export interface UpdateProcedureDTO {
@@ -269,6 +604,12 @@ export interface UpdateProcedureDTO {
   category?: string
   description?: string
   duration_minutes?: number
+  clinical_duration_minutes?: number
+  setup_buffer_minutes?: number
+  cleanup_buffer_minutes?: number
+  estimated_sessions?: number
+  min_days_between_sessions?: number
+  requires_previous_cleaning?: boolean
   is_active?: boolean
 }
 

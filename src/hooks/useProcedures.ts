@@ -27,12 +27,7 @@ export function useProcedures(page: number = 0, pageSize: number = 25) {
   })
 
   const createMutation = useMutation({
-    mutationFn: async (procedure: {
-      name: string
-      category: string
-      description?: string
-      duration_minutes: number
-    }) => {
+    mutationFn: async (procedure: import('../types').CreateProcedureDTO) => {
       const { data, error } = await supabase.from('procedures').insert(procedure as never).select().single()
       if (error) throw error
       return data

@@ -2,7 +2,7 @@
 -- Description: Stores information about dental clinic locations with geographic coordinates
 -- Requirements: 2.2, 9.4, 16.5
 
-CREATE TABLE clinics (
+CREATE TABLE IF NOT EXISTS clinics (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   address     TEXT NOT NULL,
