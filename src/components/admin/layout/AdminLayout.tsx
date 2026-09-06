@@ -14,17 +14,20 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   useSessionTimeout()
 
   return (
-    <div className="min-h-screen bg-cream flex">
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="min-h-screen bg-cream flex print:bg-white print:block">
+      <div className="print:hidden">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar onMenuToggle={() => setSidebarOpen(true)} />
+      <div className="flex-1 flex flex-col min-w-0 print:block">
+        <div className="print:hidden">
+          <TopBar onMenuToggle={() => setSidebarOpen(true)} />
+        </div>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto print:p-0 print:m-0 print:overflow-visible print:block">
           {children}
         </main>
       </div>
     </div>
   )
 }
-

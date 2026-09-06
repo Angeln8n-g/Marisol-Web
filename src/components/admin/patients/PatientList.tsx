@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { usePatients } from '../../../hooks/usePatients'
 import { PatientForm, type PatientFormValues } from './PatientForm'
 import { PatientCard } from './PatientCard'
 import type { Patient } from '../../../types'
 
 export const PatientList: React.FC = () => {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(0)
@@ -185,13 +187,26 @@ export const PatientList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {new Date(patient.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setEditingPatient(patient) }}
-                        className="text-gold hover:text-gold/80 text-sm font-medium"
-                      >
-                        Editar
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(`/admin/medical-records?patient_id=${patient.id}`)
+                          }}
+                          className="text-navy hover:text-gold font-medium flex items-center gap-1"
+                          title="Abrir Historial Clínico"
+                        >
+                          <span>Expediente</span>
+                          <span>→</span>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingPatient(patient) }}
+                          className="text-gold hover:text-gold/80 font-medium"
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

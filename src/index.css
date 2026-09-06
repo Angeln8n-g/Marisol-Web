@@ -19,3 +19,80 @@ body {
 #root {
   width: 100%;
 }
+
+/* ─── PRINT STYLES ──────────────────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 8mm 10mm;
+  }
+
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html, body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide application shell elements, sidebars, navbars, and interactive buttons */
+  nav,
+  aside,
+  header,
+  footer,
+  button,
+  .no-print,
+  [role="tooltip"] {
+    display: none !important;
+  }
+
+  /* Unclip modal wrappers so printed documents are never cut off by max-height or scrollbars */
+  [role="dialog"],
+  .fixed.inset-0,
+  .overflow-y-auto,
+  .overflow-x-auto {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Printable budget card formatting */
+  #printable-budget {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Page break helpers */
+  .break-inside-avoid,
+  .avoid-break,
+  tr,
+  table,
+  .signature-block {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

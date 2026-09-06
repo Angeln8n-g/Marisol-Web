@@ -150,9 +150,31 @@ export interface Procedure {
   estimated_sessions?: number
   min_days_between_sessions?: number
   requires_previous_cleaning?: boolean
+  chair_hourly_cost?: number
+  doctor_commission_percent?: number
+  lab_cost?: number
   is_active: boolean
   created_at: string
   current_price?: ProcedurePrice
+  supplies?: ProcedureSupply[]
+}
+
+export interface ProcedureProfitability {
+  procedure: Procedure
+  price: number
+  suppliesCost: number
+  labCost: number
+  doctorCommissionAmount: number
+  doctorCommissionPercent: number
+  chairHourlyCost: number
+  chairOverheadAmount: number
+  grossMargin: number
+  grossMarginPercent: number
+  netMargin: number
+  netMarginPercent: number
+  profitPerHour: number
+  marginStatus: 'high_margin' | 'moderate_margin' | 'low_margin' | 'loss'
+  suppliesCount: number
 }
 
 export interface ProcedurePrice {
@@ -164,6 +186,19 @@ export interface ProcedurePrice {
   effective_to: string | null
   changed_by: string
   change_reason: string | null
+}
+
+export interface ProcedureSupply {
+  id: string
+  procedure_id: string
+  item_id: string
+  quantity: number
+  dispense_unit?: string
+  is_optional: boolean
+  notes?: string | null
+  item?: InventoryItem
+  created_at: string
+  updated_at: string
 }
 
 export interface Appointment {
@@ -178,10 +213,33 @@ export interface Appointment {
   notes: string | null
   created_at: string
   updated_at: string
+  last_reminder_sent_at?: string | null
+  reminder_count?: number
+  invoice_id?: string | null
+  billing_status?: 'unbilled' | 'billed' | 'exempt'
   // Relaciones expandidas
   patient?: Patient
   clinic?: Clinic
   procedure?: Procedure
+  invoice?: Invoice
+}
+
+export type WhatsAppTemplateCategory =
+  | 'appointment_reminder'
+  | 'post_op'
+  | 'post_op_checkin'
+  | 'treatment_quote'
+  | 'custom'
+
+export interface WhatsAppMessageTemplate {
+  id: string
+  title: string
+  category: WhatsAppTemplateCategory
+  body: string
+  procedure_category?: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface MedicalRecord {
@@ -208,6 +266,8 @@ export interface RecordDocument {
   uploaded_at: string
 }
 
+export type ProcedureBillingStatus = 'unbilled' | 'invoiced' | 'paid' | 'included_in_budget'
+
 export interface ProcedureTracking {
   id: string
   patient_id: string
@@ -220,14 +280,21 @@ export interface ProcedureTracking {
   progress_notes: string | null
   next_followup_date: string | null
   alert_sent: boolean
+  budget_id?: string | null
+  budget_item_id?: string | null
+  invoice_id?: string | null
+  billing_status?: ProcedureBillingStatus
   patient?: Patient
   procedure?: Procedure
+  budget?: Budget
+  invoice?: Invoice
 }
 
 export type InventoryItemType = 'tool' | 'consumable_clinical' | 'consumable_admin' | 'other'
 export type InventoryItemStatus = 'active' | 'in_maintenance' | 'damaged' | 'retired'
 export type MaintenanceType = 'preventive' | 'corrective' | 'calibration'
 export type MaintenanceStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+export type InventoryMovementType = 'entry' | 'exit_clinical' | 'exit_admin' | 'adjustment' | 'transfer'
 
 export interface InventoryCategory {
   id: string
@@ -256,6 +323,8 @@ export interface InventoryItem {
   code?: string | null
   item_type: InventoryItemType
   unit: string
+  units_per_package?: number
+  dispense_unit?: string
   current_stock: number
   minimum_stock: number
   cost_price?: number | null
@@ -267,7 +336,25 @@ export interface InventoryItem {
   created_at: string
   updated_at: string
   clinic?: Clinic
+  category?: InventoryCategory
   batches?: InventoryBatch[]
+}
+
+export interface InventoryMovement {
+  id: string
+  item_id: string
+  batch_id?: string | null
+  clinic_id?: string | null
+  destination_clinic_id?: string | null
+  movement_type: InventoryMovementType
+  quantity: number
+  reason?: string | null
+  performed_by?: string | null
+  created_at: string
+  item?: InventoryItem
+  batch?: InventoryBatch
+  clinic?: Clinic
+  destination_clinic?: Clinic
 }
 
 export interface EquipmentMaintenance {
@@ -289,6 +376,156 @@ export interface EquipmentMaintenance {
   created_at: string
   updated_at: string
   item?: InventoryItem
+}
+
+// ─── Órdenes de Compra & Reorden Predictivo ─────────────────────────────────
+
+export type PurchaseOrderStatus = 'draft' | 'sent' | 'received' | 'cancelled'
+
+export interface PurchaseOrderItem {
+  id: string
+  order_id: string
+  item_id: string
+  package_quantity: number
+  unit_cost: number
+  total_cost: number
+  received_quantity?: number
+  notes?: string | null
+  created_at?: string
+  item?: InventoryItem
+}
+
+export interface PurchaseOrder {
+  id: string
+  clinic_id?: string | null
+  order_number: string
+  supplier_name: string
+  supplier_contact?: string | null
+  supplier_rnc?: string | null
+  status: PurchaseOrderStatus
+  forecast_window_days?: number
+  notes?: string | null
+  total_amount: number
+  estimated_delivery_date?: string | null
+  received_at?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_at: string
+  clinic?: Clinic
+  items?: PurchaseOrderItem[]
+}
+
+export interface PredictiveRestockItem {
+  item: InventoryItem
+  currentStockPackages: number
+  minimumStockPackages: number
+  unitsPerPackage: number
+  dispenseUnit: string
+  totalUnitsRequired: number
+  availableUnits: number
+  projectedRemainingUnits: number
+  projectedRemainingPackages: number
+  suggestedPackagesToOrder: number
+  estimatedCost: number
+  urgency: 'out_of_stock' | 'critical_shortage' | 'low_stock' | 'sufficient'
+  upcomingAppointments: Array<{
+    appointmentId: string
+    patientName: string
+    scheduledAt: string
+    procedureName: string
+    requiredUnits: number
+  }>
+}
+
+// ─── Trazabilidad de Esterilización & Bioseguridad ──────────────────────────
+
+export type SterilizationCycleProgram =
+  | 'instrumental_empaquetado'
+  | 'instrumental_libre'
+  | 'textiles_gomas'
+  | 'prion'
+  | 'otro'
+
+export type BiologicalIndicatorStatus = 'not_applied' | 'pending' | 'passed' | 'failed'
+export type SterilizationCycleStatus = 'in_progress' | 'completed' | 'failed' | 'cancelled'
+export type SterilePackageStatus = 'sterile' | 'used' | 'expired' | 'discarded'
+export type SterilePackageType = 'pouch' | 'cassette' | 'container' | 'wrap'
+
+export interface SterilizationCycle {
+  id: string
+  clinic_id?: string | null
+  autoclave_item_id?: string | null
+  autoclave_name: string
+  cycle_number: number
+  cycle_date: string
+  start_time?: string | null
+  end_time?: string | null
+  temperature_c: number
+  pressure_bar: number
+  exposure_time_minutes: number
+  drying_time_minutes: number
+  cycle_program: SterilizationCycleProgram
+  operator_name: string
+  chemical_indicator_passed: boolean
+  biological_indicator_status: BiologicalIndicatorStatus
+  biological_indicator_lot?: string | null
+  biological_indicator_read_date?: string | null
+  status: SterilizationCycleStatus
+  notes?: string | null
+  created_at: string
+  updated_at: string
+  packages?: SterilizationPackage[]
+  autoclave?: InventoryItem
+}
+
+export interface SterilizationPackage {
+  id: string
+  cycle_id: string
+  clinic_id?: string | null
+  package_code: string
+  description: string
+  item_id?: string | null
+  package_type: SterilePackageType
+  sterilization_date: string
+  expiration_date: string
+  status: SterilePackageStatus
+  used_in_appointment_id?: string | null
+  used_at?: string | null
+  used_by_patient_name?: string | null
+  notes?: string | null
+  created_at: string
+  item?: InventoryItem
+  cycle?: SterilizationCycle
+}
+
+// ─── Fotografía Clínica & Casos Antes / Después ─────────────────────────────
+
+export type ClinicalPhotoStage = 'before' | 'in_progress' | 'after'
+
+export type ClinicalPhotoType =
+  | 'frontal_smile'
+  | 'intraoral_frontal'
+  | 'intraoral_upper'
+  | 'intraoral_lower'
+  | 'lateral_right'
+  | 'lateral_left'
+  | 'profile'
+  | 'other'
+
+export interface PatientClinicalPhoto {
+  id: string
+  patient_id: string
+  procedure_id?: string | null
+  case_title: string
+  stage: ClinicalPhotoStage
+  photo_type: ClinicalPhotoType
+  image_url: string
+  taken_at: string
+  doctor_notes?: string | null
+  consent_for_marketing: boolean
+  created_by?: string | null
+  created_at: string
+  procedure?: Procedure
 }
 
 export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'cancelled'
@@ -319,12 +556,89 @@ export interface PaymentReceived {
   created_at: string
 }
 
+export type PaymentModality = 'single_payment' | 'installments' | 'per_session' | 'custom_financing'
+export type BudgetStatus = 'draft' | 'sent' | 'approved' | 'rejected' | 'partially_invoiced' | 'invoiced' | 'expired' | 'cancelled'
+export type InstallmentStatus = 'pending' | 'invoiced' | 'paid' | 'cancelled'
+export type PaymentFrequency = 'per_visit' | 'weekly' | 'biweekly' | 'monthly' | 'custom'
+
+export interface BudgetItem {
+  id: string
+  budget_id: string
+  procedure_id?: string | null
+  name: string
+  category?: string | null
+  quantity: number
+  unit_price: number
+  discount: number
+  total: number
+  sessions_estimated?: number
+  notes?: string | null
+  procedure?: Procedure
+}
+
+export interface BudgetInstallment {
+  id: string
+  budget_id: string
+  installment_number: number
+  concept: string
+  due_date?: string | null
+  amount: number
+  status: InstallmentStatus
+  invoice_id?: string | null
+  created_at: string
+  invoice?: Invoice
+}
+
+export interface Budget {
+  id: string
+  budget_number: string
+  patient_id?: string | null
+  patient_name?: string | null
+  patient_phone?: string | null
+  patient_email?: string | null
+  patient_id_number?: string | null
+  clinic_id?: string | null
+  issue_date: string
+  valid_until: string
+  subtotal: number
+  discount_percent: number
+  discount_amount: number
+  tax: number
+  total: number
+  payment_modality: PaymentModality
+  down_payment_amount: number
+  installments_count: number
+  payment_frequency: PaymentFrequency
+  status: BudgetStatus
+  notes?: string | null
+  terms_and_conditions?: string | null
+  patient_signature_url?: string | null
+  patient_signed_at?: string | null
+  patient_signed_name?: string | null
+  patient_signed_id_doc?: string | null
+  patient_signed_role?: string | null
+  doctor_signature_url?: string | null
+  doctor_signed_at?: string | null
+  doctor_signed_name?: string | null
+  created_by?: string | null
+  created_at: string
+  updated_at: string
+  patient?: Patient
+  clinic?: Clinic
+  items?: BudgetItem[]
+  installments?: BudgetInstallment[]
+  invoices?: Invoice[]
+}
+
 export interface Invoice {
   id: string
   invoice_number: string
   patient_id: string
   clinic_id?: string | null
   appointment_id?: string | null
+  budget_id?: string | null
+  budget_installment_id?: string | null
+  payment_modality?: PaymentModality | string
   issue_date: string
   due_date: string
   subtotal: number
@@ -338,6 +652,7 @@ export interface Invoice {
   updated_at: string
   patient?: Patient
   clinic?: Clinic
+  budget?: Budget
   items?: InvoiceItem[]
   payments?: PaymentReceived[]
 }
@@ -451,8 +766,11 @@ export interface MarketingVoucher {
 
 export interface ConsentTemplate {
   id: string
+  code?: string | null
   procedure_id?: string | null
   title: string
+  category?: 'ingreso_general' | 'periodoncia_implantes' | 'estetica_ortodoncia' | 'endodoncia_prevencion' | string | null
+  required_fields?: string[]
   description?: string | null
   template_content: string
   is_active: boolean
@@ -466,14 +784,21 @@ export interface SignedConsent {
   procedure_id?: string | null
   doctor_id?: string | null
   doctor_name: string
+  doctor_exequatur?: string | null
+  doctor_signature_url?: string | null
   appointment_id?: string | null
   template_id?: string | null
   content_rendered: string
   signature_data_url?: string | null
+  signer_role?: 'patient' | 'guardian' | 'representative' | null
+  signer_name?: string | null
+  signer_id_doc?: string | null
+  metadata?: Record<string, any> | null
   status: 'signed' | 'revoked'
   signed_at: string
   created_at: string
   procedure?: Procedure
+  template?: ConsentTemplate
 }
 
 export interface AppointmentReminder {
@@ -653,7 +978,106 @@ export interface UpdateProcedureTrackingDTO {
   progress_notes?: string
   next_followup_date?: string
   alert_sent?: boolean
+  billing_status?: ProcedureBillingStatus
+  invoice_id?: string | null
+  budget_id?: string | null
 }
+
+export interface CreateBudgetItemDTO {
+  procedure_id?: string
+  name: string
+  category?: string
+  quantity: number
+  unit_price: number
+  discount?: number
+  total?: number
+  sessions_estimated?: number
+  notes?: string
+}
+
+export interface CreateBudgetInstallmentDTO {
+  installment_number: number
+  concept: string
+  due_date?: string
+  amount: number
+}
+
+export interface CreateBudgetDTO {
+  budget_number?: string
+  patient_id?: string
+  patient_name?: string
+  patient_phone?: string
+  patient_email?: string
+  patient_id_number?: string
+  clinic_id?: string
+  issue_date?: string
+  valid_until?: string
+  subtotal?: number
+  discount_percent?: number
+  discount_amount?: number
+  tax?: number
+  total?: number
+  payment_modality?: PaymentModality
+  down_payment_amount?: number
+  installments_count?: number
+  payment_frequency?: PaymentFrequency
+  status?: BudgetStatus
+  notes?: string
+  terms_and_conditions?: string
+  patient_signature_url?: string | null
+  patient_signed_at?: string | null
+  patient_signed_name?: string | null
+  patient_signed_id_doc?: string | null
+  patient_signed_role?: string | null
+  doctor_signature_url?: string | null
+  doctor_signed_at?: string | null
+  doctor_signed_name?: string | null
+  items: CreateBudgetItemDTO[]
+  installments?: CreateBudgetInstallmentDTO[]
+}
+
+export interface UpdateBudgetDTO {
+  patient_id?: string | null
+  patient_name?: string
+  patient_phone?: string
+  patient_email?: string
+  patient_id_number?: string
+  clinic_id?: string
+  valid_until?: string
+  subtotal?: number
+  discount_percent?: number
+  discount_amount?: number
+  tax?: number
+  total?: number
+  payment_modality?: PaymentModality
+  down_payment_amount?: number
+  installments_count?: number
+  payment_frequency?: PaymentFrequency
+  status?: BudgetStatus
+  notes?: string
+  terms_and_conditions?: string
+  patient_signature_url?: string | null
+  patient_signed_at?: string | null
+  patient_signed_name?: string | null
+  patient_signed_id_doc?: string | null
+  patient_signed_role?: string | null
+  doctor_signature_url?: string | null
+  doctor_signed_at?: string | null
+  doctor_signed_name?: string | null
+  items?: CreateBudgetItemDTO[]
+  installments?: CreateBudgetInstallmentDTO[]
+}
+
+export interface SignBudgetDTO {
+  budgetId: string
+  signatureDataUrl: string
+  signerName: string
+  signerIdDoc?: string
+  signerRole?: string
+  doctorSignatureUrl?: string
+  doctorSignedName?: string
+}
+
 
 // ─── Tipos de UI ─────────────────────────────────────────────────────────────
 
@@ -734,6 +1158,284 @@ export interface Database {
         Insert: Omit<User, 'id'>
         Update: Partial<Omit<User, 'id'>>
       }
+      budgets: {
+        Row: Budget
+        Insert: Omit<Budget, 'id' | 'created_at' | 'updated_at' | 'patient' | 'clinic' | 'items' | 'installments' | 'invoices'>
+        Update: Partial<Omit<Budget, 'id' | 'created_at' | 'updated_at' | 'patient' | 'clinic' | 'items' | 'installments' | 'invoices'>>
+      }
+      budget_items: {
+        Row: BudgetItem
+        Insert: Omit<BudgetItem, 'id' | 'procedure'>
+        Update: Partial<Omit<BudgetItem, 'id' | 'procedure'>>
+      }
+      budget_installments: {
+        Row: BudgetInstallment
+        Insert: Omit<BudgetInstallment, 'id' | 'created_at' | 'invoice'>
+        Update: Partial<Omit<BudgetInstallment, 'id' | 'created_at' | 'invoice'>>
+      }
+      patient_clinical_examinations: {
+        Row: PatientClinicalExamination
+        Insert: Omit<PatientClinicalExamination, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<PatientClinicalExamination, 'id' | 'created_at' | 'updated_at'>>
+      }
+      patient_periodontograms: {
+        Row: PatientPeriodontogram
+        Insert: Omit<PatientPeriodontogram, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<PatientPeriodontogram, 'id' | 'created_at' | 'updated_at'>>
+      }
+      patient_odontograms: {
+        Row: PatientOdontogram
+        Insert: Omit<PatientOdontogram, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<PatientOdontogram, 'id' | 'created_at' | 'updated_at'>>
+      }
     }
   }
 }
+
+// ==========================================
+// FICHA DE EXAMEN CLÍNICO ODONTOLÓGICO TYPES
+// ==========================================
+
+export interface ChiefComplaintData {
+  reason: string
+  discomfort: string
+  duration: string
+  previous_treatments: string
+}
+
+export interface MedicalHistoryData {
+  current_illnesses: string
+  medications: string
+  allergies: string
+  surgeries_hospitalizations: string
+  bleeding_healing_problems: string
+  anesthesia_reactions: string
+  pregnancy_status: string
+  additional_notes?: string
+}
+
+export interface DentalHistoryData {
+  last_dental_visit: string
+  gum_disease_history: string
+  scaling_root_planing: string
+  surgeries_implants_grafts: string
+  pending_treatments: string
+  pain_bleeding_mobility_sensitivity: string
+  teeth_migration: string
+}
+
+export interface HygieneHabitsData {
+  brushing_frequency: string
+  floss_interdental: string
+  mouthwash: string
+  tobacco_use: string
+  alcohol_consumption: string
+  bruxism_parafunctions: string
+}
+
+export interface PeriodontalEvaluationData {
+  gum_bleeding: string
+  gum_changes: string
+  persistent_halitosis: string
+  pus_secretion: string
+  tooth_mobility: string
+  teeth_spacing: string
+  family_history_periodontal: string
+}
+
+export interface PatientPerceptionData {
+  treatment_expectations: string
+  areas_of_concern: string
+  smile_improvements: string
+}
+
+export interface ProfessionalExamData {
+  oral_hygiene_plaque: string
+  dental_calculus: string
+  gum_status: string
+  bleeding_on_probing: string
+  probing_depth_summary: string
+  clinical_attachment_level: string
+  recessions: string
+  tooth_mobility: string
+  furcation_involvement: string
+  suppuration: string
+  dental_migration: string
+  mucosa_lesions: string
+  occlusion_evaluation: string
+  missing_teeth: string
+  caries_restorations: string
+  radiographs_cbct: string
+  periodontal_diagnosis: string
+  prognosis: string
+  treatment_plan: string
+}
+
+export interface PatientClinicalExamination {
+  id: string
+  patient_id: string
+  doctor_id?: string | null
+  doctor_name?: string | null
+  exam_date: string
+  chief_complaint: ChiefComplaintData
+  medical_history: MedicalHistoryData
+  dental_history: DentalHistoryData
+  hygiene_habits: HygieneHabitsData
+  periodontal_evaluation: PeriodontalEvaluationData
+  patient_perception: PatientPerceptionData
+  professional_exam: ProfessionalExamData
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateClinicalExaminationDTO {
+  patient_id: string
+  doctor_id?: string
+  doctor_name?: string
+  exam_date?: string
+  chief_complaint: ChiefComplaintData
+  medical_history: MedicalHistoryData
+  dental_history: DentalHistoryData
+  hygiene_habits: HygieneHabitsData
+  periodontal_evaluation: PeriodontalEvaluationData
+  patient_perception: PatientPerceptionData
+  professional_exam: ProfessionalExamData
+}
+
+// ==========================================
+// PERIODONTOGRAMA (SEPA STYLE) TYPES
+// ==========================================
+
+export interface PeriodontogramSiteData {
+  probing_depth: number
+  gingival_margin: number
+  clinical_attachment: number
+  bleeding: boolean
+  plaque: boolean
+  suppuration: boolean
+}
+
+export interface PeriodontogramToothData {
+  tooth_number: number
+  status: 'present' | 'missing' | 'implant'
+  mobility: 0 | 1 | 2 | 3
+  furcation?: 0 | 1 | 2 | 3
+  vestibular: {
+    distal: PeriodontogramSiteData
+    middle: PeriodontogramSiteData
+    mesial: PeriodontogramSiteData
+  }
+  palatal_lingual: {
+    distal: PeriodontogramSiteData
+    middle: PeriodontogramSiteData
+    mesial: PeriodontogramSiteData
+  }
+  anchura_encia?: number
+  pronostico?: string
+  palatal_furcation?: 0 | 1 | 2 | 3
+  notes?: string
+}
+
+export interface PeriodontogramStats {
+  total_teeth_present: number
+  total_teeth_missing: number
+  total_implants: number
+  total_sites_evaluated: number
+  bop_sites: number
+  bop_percentage: number
+  plaque_sites: number
+  plaque_percentage: number
+  shallow_pockets_count: number
+  deep_pockets_count: number
+  furcation_sites_count: number
+  suppuration_sites_count: number
+  media_profundidad?: number
+  media_nivel_insercion?: number
+}
+
+export interface PatientPeriodontogram {
+  id: string
+  patient_id: string
+  doctor_id?: string | null
+  doctor_name?: string | null
+  title: string
+  exam_date: string
+  teeth_data: Record<string, PeriodontogramToothData>
+  summary_stats: PeriodontogramStats
+  notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreatePeriodontogramDTO {
+  patient_id: string
+  doctor_id?: string
+  doctor_name?: string
+  title: string
+  exam_date?: string
+  teeth_data: Record<string, PeriodontogramToothData>
+  summary_stats: PeriodontogramStats
+  notes?: string
+}
+
+// ==========================================
+// ODONTOGRAMA TYPES
+// ==========================================
+
+export type ToothSurface = 'vestibular' | 'lingual_palatal' | 'mesial' | 'distal' | 'occlusal_incisal'
+
+export type ToothCondition =
+  | 'healthy'
+  | 'caries'
+  | 'composite'
+  | 'amalgam'
+  | 'crown'
+  | 'endodontics_done'
+  | 'endodontics_needed'
+  | 'missing'
+  | 'extraction_needed'
+  | 'implant'
+  | 'sealant'
+  | 'fracture'
+  | 'bridge'
+
+export interface ToothState {
+  tooth_number: number
+  general_condition: ToothCondition
+  surfaces: {
+    vestibular: ToothCondition
+    lingual_palatal: ToothCondition
+    mesial: ToothCondition
+    distal: ToothCondition
+    occlusal_incisal: ToothCondition
+  }
+  notes?: string
+}
+
+export interface PatientOdontogram {
+  id: string
+  patient_id: string
+  doctor_id?: string | null
+  doctor_name?: string | null
+  title: string
+  dentition_type: 'adult' | 'pediatric'
+  exam_date: string
+  teeth_data: Record<string, ToothState>
+  findings_summary?: Record<string, number>
+  notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateOdontogramDTO {
+  patient_id: string
+  doctor_id?: string
+  doctor_name?: string
+  title: string
+  dentition_type: 'adult' | 'pediatric'
+  exam_date?: string
+  teeth_data: Record<string, ToothState>
+  findings_summary?: Record<string, number>
+  notes?: string
+}
+

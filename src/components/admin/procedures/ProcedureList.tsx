@@ -1,14 +1,24 @@
 import React, { useState } from 'react'
 import { useProcedures } from '../../../hooks/useProcedures'
+import { useProceduresProfitability } from '../../../hooks/useProcedureProfitability'
 import { ProcedureForm, type ProcedureFormValues } from './ProcedureForm'
+import { ProcedureSuppliesModal } from './ProcedureSuppliesModal'
+import { ProcedureProfitabilityModal } from './ProcedureProfitabilityModal'
 import type { Procedure } from '../../../types'
 
-export const ProcedureList: React.FC = () => {
+interface ProcedureListProps {
+  onSimulateProfitability?: (procedure: Procedure) => void
+}
+
+export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitability }) => {
   const [page, setPage] = useState(0)
   const pageSize = 25
   const { procedures, isLoading, createProcedure, isCreating, updateProcedure, isUpdating, toggleActive, refetch, hasNextPage, hasPreviousPage } = useProcedures(page, pageSize)
+  const { profitabilityMap } = useProceduresProfitability()
   const [showForm, setShowForm] = useState(false)
   const [editingProcedure, setEditingProcedure] = useState<Procedure | null>(null)
+  const [suppliesModalProcedure, setSuppliesModalProcedure] = useState<Procedure | null>(null)
+  const [profitabilityModalProcedure, setProfitabilityModalProcedure] = useState<Procedure | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
   const handleCreate = async (data: ProcedureFormValues) => {
@@ -110,54 +120,111 @@ export const ProcedureList: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Nombre</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Categoría</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Duración</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rentabilidad Neta</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Estado</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {procedures.map((proc) => (
-                  <tr key={proc.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-navy">{proc.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{proc.category}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-navy">
-                          {proc.clinical_duration_minutes || proc.duration_minutes} min clínicos
-                        </span>
-                        {(proc.setup_buffer_minutes || proc.cleanup_buffer_minutes) ? (
-                          <span className="text-[11px] text-gray-500">
-                            Total sillón: {proc.duration_minutes} min (buffers: +{(proc.setup_buffer_minutes || 0) + (proc.cleanup_buffer_minutes || 0)}m)
+                {procedures.map((proc) => {
+                  const prof = profitabilityMap.get(proc.id)
+                  return (
+                    <tr key={proc.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-navy">{proc.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{proc.category}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-navy">
+                            {proc.clinical_duration_minutes || proc.duration_minutes} min clínicos
                           </span>
-                        ) : null}
-                        {proc.estimated_sessions && proc.estimated_sessions > 1 ? (
-                          <span className="text-[11px] text-purple-600 font-medium">
-                            {proc.estimated_sessions} sesiones {proc.min_days_between_sessions ? `(c/${proc.min_days_between_sessions}d)` : ''}
-                          </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => toggleActive(proc.id, proc.is_active)}
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                          proc.is_active
-                            ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
-                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
-                        }`}
-                      >
-                        {proc.is_active ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => setEditingProcedure(proc)}
-                        className="text-gold hover:text-gold/80 text-sm font-medium"
-                      >
-                        Editar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                          {(proc.setup_buffer_minutes || proc.cleanup_buffer_minutes) ? (
+                            <span className="text-[11px] text-gray-500">
+                              Total sillón: {proc.duration_minutes} min (buffers: +{(proc.setup_buffer_minutes || 0) + (proc.cleanup_buffer_minutes || 0)}m)
+                            </span>
+                          ) : null}
+                          {proc.estimated_sessions && proc.estimated_sessions > 1 ? (
+                            <span className="text-[11px] text-purple-600 font-medium">
+                              {proc.estimated_sessions} sesiones {proc.min_days_between_sessions ? `(c/${proc.min_days_between_sessions}d)` : ''}
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {prof ? (
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                  prof.marginStatus === 'high_margin'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : prof.marginStatus === 'moderate_margin'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {prof.netMarginPercent.toFixed(0)}% Neto
+                              </span>
+                              <span className="text-xs font-semibold text-navy">
+                                RD$ {prof.profitPerHour.toLocaleString('es-DO', { maximumFractionDigits: 0 })}/hr
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-gray-500 mt-0.5">
+                              Tarifa: RD$ {prof.price.toLocaleString('es-DO')} • {prof.suppliesCount} insumos
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Sin datos</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => toggleActive(proc.id, proc.is_active)}
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                            proc.is_active
+                              ? 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                          }`}
+                        >
+                          {proc.is_active ? 'Activo' : 'Inactivo'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const enriched = prof?.procedure || proc
+                              if (onSimulateProfitability) {
+                                onSimulateProfitability(enriched)
+                              } else {
+                                setProfitabilityModalProcedure(enriched)
+                              }
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1"
+                            title="Simular rentabilidad y unit economics"
+                          >
+                            <span>💰 Margen</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSuppliesModalProcedure(proc)}
+                            className="px-2.5 py-1 text-xs font-semibold text-navy bg-sand/40 hover:bg-sand/70 border border-gold/30 rounded-lg transition-colors flex items-center gap-1"
+                            title="Configurar bandeja clínica de materiales y equipos"
+                          >
+                            <span>📦 Bandeja</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingProcedure(proc)}
+                            className="text-gold hover:text-gold/80 text-sm font-medium px-2 py-1"
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -184,6 +251,20 @@ export const ProcedureList: React.FC = () => {
           </div>
         </>
       )}
+
+      {/* Modal de Configuración de Bandeja Clínica */}
+      <ProcedureSuppliesModal
+        isOpen={Boolean(suppliesModalProcedure)}
+        onClose={() => setSuppliesModalProcedure(null)}
+        procedure={suppliesModalProcedure}
+      />
+
+      {/* Modal de Simulación de Rentabilidad */}
+      <ProcedureProfitabilityModal
+        isOpen={Boolean(profitabilityModalProcedure)}
+        onClose={() => setProfitabilityModalProcedure(null)}
+        procedure={profitabilityModalProcedure}
+      />
     </div>
   )
 }

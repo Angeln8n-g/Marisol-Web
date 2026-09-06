@@ -6,22 +6,24 @@ interface UseInvoicesParams {
   clinicId?: string
   status?: string
   patientId?: string
+  budgetId?: string
 }
 
 export function useInvoices(params: UseInvoicesParams = {}) {
-  const { clinicId, status, patientId } = params
+  const { clinicId, status, patientId, budgetId } = params
 
   return useQuery({
-    queryKey: ['invoices', clinicId, status, patientId],
+    queryKey: ['invoices', clinicId, status, patientId, budgetId],
     queryFn: async () => {
       let query = supabase
         .from('invoices')
-        .select('*, patient:patients(id, full_name, phone), clinic:clinics(id, name), items:invoice_items(*), payments:payments_received(*)')
+        .select('*, patient:patients(id, full_name, phone), clinic:clinics(id, name), budget:budgets(id, budget_number, total, status), items:invoice_items(*), payments:payments_received(*)')
         .order('created_at', { ascending: false })
 
       if (clinicId) query = query.eq('clinic_id', clinicId)
       if (status && status !== 'all') query = query.eq('status', status)
       if (patientId) query = query.eq('patient_id', patientId)
+      if (budgetId) query = query.eq('budget_id', budgetId)
 
       const { data, error } = await query
       if (error) throw error
@@ -120,6 +122,10 @@ export function useAccountingMutations() {
     mutationFn: async (payload: {
       patient_id: string
       clinic_id?: string
+      appointment_id?: string
+      budget_id?: string
+      budget_installment_id?: string
+      payment_modality?: string
       items: Array<{ procedure_id?: string; description: string; quantity: number; unit_price: number }>
       discount?: number
       tax?: number
@@ -138,6 +144,10 @@ export function useAccountingMutations() {
           invoice_number: invoiceNumber,
           patient_id: payload.patient_id,
           clinic_id: payload.clinic_id || null,
+          appointment_id: payload.appointment_id || null,
+          budget_id: payload.budget_id || null,
+          budget_installment_id: payload.budget_installment_id || null,
+          payment_modality: payload.payment_modality || 'single_payment',
           subtotal,
           discount,
           tax,
@@ -169,6 +179,7 @@ export function useAccountingMutations() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['accounting-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['appointments'] })
     },
   })
 

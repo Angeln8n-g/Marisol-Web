@@ -112,7 +112,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:static print:p-0 print:m-0 print:bg-transparent print:backdrop-blur-none print:block"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
@@ -120,10 +120,10 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         ref={modalRef}
-        className={`relative w-full ${sizeStyles[size]} bg-white rounded-lg shadow-xl transform transition-all`}
+        className={`relative w-full ${sizeStyles[size]} bg-white rounded-lg shadow-xl transform transition-all print:shadow-none print:max-w-full print:rounded-none print:border-none print:m-0 print:p-0`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
           {title && (
             <h2 id="modal-title" className="text-xl font-semibold text-navy">
               {title}
@@ -151,13 +151,13 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="px-6 py-4 max-h-[calc(100vh-200px)] overflow-y-auto print:p-0 print:m-0 print:overflow-visible print:max-h-none">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 print:hidden">
             {footer}
           </div>
         )}

@@ -3,16 +3,28 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useMedicalRecords } from '../../hooks/useMedicalRecords'
-import { MedicalRecordView, MedicalRecordForm, type MedicalRecordFormValues } from '../../components/admin/medical-records'
+import {
+  MedicalRecordView,
+  MedicalRecordForm,
+  ClinicalExamForm,
+  type MedicalRecordFormValues,
+} from '../../components/admin/medical-records'
+import { PeriodontogramChart } from '../../components/admin/periodontogram'
+import { OdontogramViewer } from '../../components/admin/odontogram'
 import { ConsentManager } from '../../components/admin/medical-records/ConsentManager'
+import { MedicalAlertBanner, MedicalAlertBadge } from '../../components/admin/patients'
+import { ClinicalPhotographyGallery } from '../../components/admin/photography'
 import type { Patient } from '../../types'
+
+type MedicalTabType = 'clinical_exam' | 'periodontogram' | 'odontogram' | 'records' | 'consents' | 'photography'
 
 export const MedicalRecordsPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const patientIdFromParams = searchParams.get('patient_id') || undefined
+  const tabFromParams = (searchParams.get('tab') as MedicalTabType) || 'clinical_exam'
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | undefined>(patientIdFromParams)
-  const [activeTab, setActiveTab] = useState<'records' | 'consents'>('records')
+  const [activeTab, setActiveTab] = useState<MedicalTabType>(tabFromParams)
   const [showForm, setShowForm] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [uploadingRecordId, setUploadingRecordId] = useState<string | null>(null)
@@ -26,6 +38,12 @@ export const MedicalRecordsPage: React.FC = () => {
       setSelectedPatientId(patientIdFromParams)
     }
   }, [patientIdFromParams])
+
+  useEffect(() => {
+    if (searchParams.get('tab')) {
+      setActiveTab(searchParams.get('tab') as MedicalTabType)
+    }
+  }, [searchParams])
 
   // Fetch patient details
   const { data: patient } = useQuery({
@@ -47,7 +65,11 @@ export const MedicalRecordsPage: React.FC = () => {
   const { data: patientOptions = [] } = useQuery({
     queryKey: ['patients-quick-search', patientSearch],
     queryFn: async () => {
-      let query = supabase.from('patients').select('id, full_name, phone, identification_number').order('full_name').limit(10)
+      let query = supabase
+        .from('patients')
+        .select('id, full_name, phone, identification_number')
+        .order('full_name')
+        .limit(10)
       if (patientSearch.trim()) {
         query = query.ilike('full_name', `%${patientSearch.trim()}%`)
       }
@@ -98,17 +120,24 @@ export const MedicalRecordsPage: React.FC = () => {
 
   const handleSelectPatient = (id: string) => {
     setSelectedPatientId(id)
-    setSearchParams({ patient_id: id })
+    setSearchParams({ patient_id: id, tab: activeTab })
     setShowForm(false)
+  }
+
+  const handleTabChange = (tab: MedicalTabType) => {
+    setActiveTab(tab)
+    if (selectedPatientId) {
+      setSearchParams({ patient_id: selectedPatientId, tab })
+    }
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-playfair text-navy font-bold">Historial Clínico de Pacientes</h1>
+          <h1 className="text-2xl font-playfair text-navy font-bold">Historial Clínico Integral</h1>
           <p className="text-sm text-gray-600 font-montserrat mt-0.5">
-            Evolución médica, odontológica y consentimientos legales por doctor
+            Ficha clínica periodontal, periodontograma SEPA, odontograma y notas de evolución
           </p>
         </div>
 
@@ -116,7 +145,7 @@ export const MedicalRecordsPage: React.FC = () => {
         <div className="w-full sm:w-80 flex flex-col gap-1.5">
           <input
             type="text"
-            placeholder="Buscar por nombre..."
+            placeholder="Buscar por nombre o ID..."
             value={patientSearch}
             onChange={(e) => setPatientSearch(e.target.value)}
             className="w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-montserrat text-navy focus:outline-none focus:ring-1 focus:ring-gold"
@@ -145,61 +174,130 @@ export const MedicalRecordsPage: React.FC = () => {
           </div>
           <h3 className="text-lg font-playfair font-semibold text-navy">Selecciona un Paciente</h3>
           <p className="text-sm text-gray-500 font-montserrat max-w-md mx-auto">
-            Elige un paciente en el selector superior o desde el módulo de Pacientes para revisar su historial y consentimientos.
+            Elige un paciente en el selector superior o desde el módulo de Pacientes para examinar su ficha clínica, periodontograma u odontograma.
           </p>
         </div>
       ) : (
         <div className="space-y-5">
           {/* Tarjeta de Resumen del Paciente Activo */}
           {patient && (
-            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-gold/20 text-gold font-bold flex items-center justify-center font-montserrat">
-                  {patient.full_name.charAt(0)}
-                </div>
-                <div>
-                  <h2 className="text-lg font-playfair font-bold text-navy">{patient.full_name}</h2>
-                  <p className="text-xs text-gray-500 font-montserrat">
-                    Tel: {patient.phone} · ID: {patient.identification_number || 'Sin cédula'} · ARS: {patient.insurance_provider || 'Particular'}
-                  </p>
+            <div className="space-y-3">
+              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-gold/20 text-gold font-bold flex items-center justify-center font-montserrat">
+                    {patient.full_name.charAt(0)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-lg font-playfair font-bold text-navy">{patient.full_name}</h2>
+                      <MedicalAlertBadge patient={patient} />
+                    </div>
+                    <p className="text-xs text-gray-500 font-montserrat mt-0.5">
+                      Tel: {patient.phone} · ID: {patient.identification_number || 'Sin cédula'} · ARS: {patient.insurance_provider || 'Particular'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {patient.medical_alerts && (
-                <div className="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 font-montserrat font-medium flex items-center gap-1.5">
-                  <span>⚠️ {patient.medical_alerts}</span>
-                </div>
-              )}
+              {/* Semáforo de Seguridad Médica del Paciente */}
+              <MedicalAlertBanner patient={patient} />
             </div>
           )}
 
-          {/* Selector de Pestañas: Evolución Clínica vs. Consentimientos */}
-          <div className="flex border-b border-gray-200 gap-2 font-montserrat">
+          {/* Selector de Pestañas del Historial Clínico */}
+          <div className="flex overflow-x-auto border-b border-gray-200 gap-1 font-montserrat scrollbar-thin">
             <button
               type="button"
-              onClick={() => setActiveTab('records')}
-              className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              onClick={() => handleTabChange('clinical_exam')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                activeTab === 'clinical_exam'
+                  ? 'border-gold text-navy font-bold'
+                  : 'border-transparent text-gray-500 hover:text-navy'
+              }`}
+            >
+              <span>📋</span>
+              <span>Ficha Clínica Odontológica</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('periodontogram')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                activeTab === 'periodontogram'
+                  ? 'border-gold text-navy font-bold'
+                  : 'border-transparent text-gray-500 hover:text-navy'
+              }`}
+            >
+              <span>🦷</span>
+              <span>Periodontograma SEPA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('odontogram')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                activeTab === 'odontogram'
+                  ? 'border-gold text-navy font-bold'
+                  : 'border-transparent text-gray-500 hover:text-navy'
+              }`}
+            >
+              <span>🔍</span>
+              <span>Odontograma Digital</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('records')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 activeTab === 'records'
                   ? 'border-gold text-navy font-bold'
                   : 'border-transparent text-gray-500 hover:text-navy'
               }`}
             >
-              Evolución y Diagnósticos ({records.length})
+              <span>📝</span>
+              <span>Evolución & Documentos ({records.length})</span>
             </button>
+
             <button
               type="button"
-              onClick={() => setActiveTab('consents')}
-              className={`pb-3 px-4 text-sm font-medium border-b-2 transition-colors ${
+              onClick={() => handleTabChange('consents')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                 activeTab === 'consents'
                   ? 'border-gold text-navy font-bold'
                   : 'border-transparent text-gray-500 hover:text-navy'
               }`}
             >
-              Consentimientos Informados
+              <span>📑</span>
+              <span>Consentimientos Informados</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('photography')}
+              className={`pb-3 px-4 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                activeTab === 'photography'
+                  ? 'border-gold text-navy font-bold'
+                  : 'border-transparent text-gray-500 hover:text-navy'
+              }`}
+            >
+              <span>📸</span>
+              <span>Fotografía Clínica & Antes/Después</span>
             </button>
           </div>
 
-          {/* Contenido según pestaña */}
+          {/* Contenido según pestaña activa */}
+          {activeTab === 'clinical_exam' && patient && (
+            <ClinicalExamForm patient={patient} />
+          )}
+
+          {activeTab === 'periodontogram' && patient && (
+            <PeriodontogramChart patient={patient} />
+          )}
+
+          {activeTab === 'odontogram' && patient && (
+            <OdontogramViewer patient={patient} />
+          )}
+
           {activeTab === 'records' && (
             <div className="space-y-4">
               <div className="flex items-center justify-end">
@@ -262,6 +360,10 @@ export const MedicalRecordsPage: React.FC = () => {
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
               <ConsentManager patient={patient} />
             </div>
+          )}
+
+          {activeTab === 'photography' && patient && (
+            <ClinicalPhotographyGallery patient={patient} />
           )}
         </div>
       )}

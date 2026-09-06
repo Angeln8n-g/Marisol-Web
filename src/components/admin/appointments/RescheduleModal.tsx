@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Modal } from '../../ui'
 import { useAppointments } from '../../../hooks/useAppointments'
 import { useAppointmentConflicts } from '../../../hooks/useAppointmentConflicts'
@@ -10,6 +10,21 @@ interface RescheduleModalProps {
   onClose: () => void
   appointment: Appointment | null
   onRescheduled?: () => void
+}
+
+const safeToIsoString = (val: string | null | undefined): string | null => {
+  if (!val) return null
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+const getLocalDatetimeInputString = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
 }
 
 export const RescheduleModal: React.FC<RescheduleModalProps> = ({
@@ -30,42 +45,46 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
   // Pre-fill on open
   useEffect(() => {
     if (appointment && isOpen) {
-      const date = new Date(appointment.scheduled_at)
-      const localIso = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16)
-      setNewScheduledAt(localIso)
+      setNewScheduledAt(getLocalDatetimeInputString(appointment.scheduled_at))
       setDurationMinutes(appointment.duration_minutes || 45)
       setReason('')
       setAllowConflictOverride(false)
       setIsSuccess(false)
+      setRescheduledDateFormatted('')
     }
   }, [appointment, isOpen])
 
-  // Conflict detection hook
+  // Conflict detection hook with safe ISO timestamp
+  const safeScheduledAtIso = useMemo(() => safeToIsoString(newScheduledAt), [newScheduledAt])
+
   const { conflicts, hasConflict, isLoading: checkingConflicts } = useAppointmentConflicts({
     clinicId: appointment?.clinic_id,
-    scheduledAt: newScheduledAt ? new Date(newScheduledAt).toISOString() : null,
+    scheduledAt: safeScheduledAtIso,
     durationMinutes,
     excludeAppointmentId: appointment?.id,
-    enabled: isOpen && !!appointment,
+    enabled: isOpen && !!appointment && !!safeScheduledAtIso,
   })
 
   // Date quick-shift helpers
   const handleShiftDays = (days: number) => {
-    const base = newScheduledAt ? new Date(newScheduledAt) : new Date()
+    let base = new Date()
+    if (newScheduledAt) {
+      const parsed = new Date(newScheduledAt)
+      if (!isNaN(parsed.getTime())) {
+        base = parsed
+      }
+    }
     base.setDate(base.getDate() + days)
-    const localIso = new Date(base.getTime() - base.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 16)
-    setNewScheduledAt(localIso)
+    setNewScheduledAt(getLocalDatetimeInputString(base.toISOString()))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!appointment || !newScheduledAt) return
 
-    const isoDate = new Date(newScheduledAt).toISOString()
+    const isoDate = safeToIsoString(newScheduledAt)
+    if (!isoDate) return
+
     const updatedNotes = reason.trim()
       ? `${appointment.notes ? `${appointment.notes}\n` : ''}[Reprogramada: ${reason.trim()}]`
       : appointment.notes
@@ -87,15 +106,23 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
     }
   }
 
-  const whatsappMessage = appointment && appointment.patient?.phone
-    ? encodeURIComponent(
-        `Hola ${appointment.patient.full_name}, le confirmamos que su cita odontológica para ${
-          appointment.procedure?.name || 'su consulta'
-        } en la clínica ${
-          appointment.clinic?.name || 'Dra. Marisol García'
-        } ha sido reprogramada para el día ${rescheduledDateFormatted || formatDateTime(new Date(newScheduledAt).toISOString())}. Por favor responda 'CONFIRMO' para validar su nuevo turno. ¡Gracias!`
-      )
-    : ''
+  const formattedTargetDate = useMemo(() => {
+    if (rescheduledDateFormatted) return rescheduledDateFormatted
+    const iso = safeToIsoString(newScheduledAt)
+    return iso ? formatDateTime(iso) : ''
+  }, [rescheduledDateFormatted, newScheduledAt])
+
+  const whatsappMessage = useMemo(() => {
+    if (!appointment || !appointment.patient?.phone) return ''
+    const dateText = formattedTargetDate || (appointment.scheduled_at ? formatDateTime(appointment.scheduled_at) : '')
+    return encodeURIComponent(
+      `Hola ${appointment.patient.full_name}, le confirmamos que su cita odontológica para ${
+        appointment.procedure?.name || 'su consulta'
+      } en la clínica ${
+        appointment.clinic?.name || 'Dra. Marisol García'
+      } ha sido reprogramada para el día ${dateText}. Por favor responda 'CONFIRMO' para validar su nuevo turno. ¡Gracias!`
+    )
+  }, [appointment, formattedTargetDate])
 
   const whatsappUrl = appointment?.patient?.phone
     ? `https://wa.me/${appointment.patient.phone.replace(/\D/g, '')}?text=${whatsappMessage}`
@@ -127,7 +154,7 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({
             <div className="flex justify-between border-t border-gold/20 pt-1">
               <span className="text-gray-500">Horario actual:</span>
               <span className="font-semibold text-purple-700">
-                {appointment ? formatDateTime(appointment.scheduled_at) : '—'}
+                {appointment?.scheduled_at ? formatDateTime(appointment.scheduled_at) : '—'}
               </span>
             </div>
           </div>

@@ -16,6 +16,7 @@ const LocationsPage = lazy(() => import('../pages/admin/LocationsPage').then(m =
 const NewLocationPage = lazy(() => import('../pages/admin/NewLocationPage').then(m => ({ default: m.NewLocationPage })))
 const EditLocationPage = lazy(() => import('../pages/admin/EditLocationPage').then(m => ({ default: m.EditLocationPage })))
 const AccountingPage = lazy(() => import('../pages/admin/AccountingPage').then(m => ({ default: m.AccountingPage })))
+const BudgetsPage = lazy(() => import('../pages/admin/BudgetsPage').then(m => ({ default: m.BudgetsPage })))
 const InventoryPage = lazy(() => import('../pages/admin/InventoryPage').then(m => ({ default: m.InventoryPage })))
 const MarketingPage = lazy(() => import('../pages/admin/MarketingPage').then(m => ({ default: m.MarketingPage })))
 
@@ -61,6 +62,7 @@ export const AdminRoutes = () => (
     <Route path="locations/new" element={<ProtectedLayout><NewLocationPage /></ProtectedLayout>} />
     <Route path="locations/:id/edit" element={<ProtectedLayout><EditLocationPage /></ProtectedLayout>} />
     <Route path="accounting" element={<ProtectedLayout><AccountingPage /></ProtectedLayout>} />
+    <Route path="budgets" element={<ProtectedLayout><BudgetsPage /></ProtectedLayout>} />
     <Route path="inventory" element={<ProtectedLayout><InventoryPage /></ProtectedLayout>} />
     <Route path="marketing" element={<ProtectedLayout><MarketingPage /></ProtectedLayout>} />
   </Routes>

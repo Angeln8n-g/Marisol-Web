@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Modal } from '../../ui'
 import { useAppointments } from '../../../hooks/useAppointments'
 import { useClinics } from '../../../hooks/useClinics'
@@ -7,6 +7,21 @@ import { usePatients } from '../../../hooks/usePatients'
 import { useAppointmentConflicts } from '../../../hooks/useAppointmentConflicts'
 import { formatTime } from '../../../lib/utils'
 import type { Appointment, AppointmentStatus } from '../../../types'
+
+const safeToIsoString = (val: string | null | undefined): string | null => {
+  if (!val) return null
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+const getLocalDatetimeInputString = (dateStrOrDate: string | Date | null | undefined): string => {
+  if (!dateStrOrDate) return ''
+  const date = typeof dateStrOrDate === 'string' ? new Date(dateStrOrDate) : dateStrOrDate
+  if (isNaN(date.getTime())) return ''
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
+}
 
 interface AppointmentModalProps {
   isOpen: boolean
@@ -50,13 +65,15 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [allowConflictOverride, setAllowConflictOverride] = useState<boolean>(false)
 
-  // Real-time conflict detection
+  // Real-time conflict detection with safe ISO conversion
+  const safeScheduledAtIso = useMemo(() => safeToIsoString(scheduledAt), [scheduledAt])
+
   const { conflicts, hasConflict, isLoading: checkingConflicts } = useAppointmentConflicts({
     clinicId: clinicId || null,
-    scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+    scheduledAt: safeScheduledAtIso,
     durationMinutes,
     excludeAppointmentId: appointmentToEdit?.id,
-    enabled: isOpen && !!clinicId && !!scheduledAt,
+    enabled: isOpen && !!clinicId && !!safeScheduledAtIso,
   })
 
   // Initialize or reset form values
@@ -65,26 +82,18 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       setPatientId(appointmentToEdit.patient_id)
       setClinicId(appointmentToEdit.clinic_id)
       setProcedureId(appointmentToEdit.procedure_id || '')
-      // Format to datetime-local (YYYY-MM-DDTHH:mm)
-      const date = new Date(appointmentToEdit.scheduled_at)
-      const localIso = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16)
-      setScheduledAt(localIso)
+      setScheduledAt(getLocalDatetimeInputString(appointmentToEdit.scheduled_at))
       setDurationMinutes(appointmentToEdit.duration_minutes || 45)
       setStatus(appointmentToEdit.status)
       setNotes(appointmentToEdit.notes || '')
       setIsNewPatient(false)
     } else {
       // Default to initialDate or next upcoming hour
-      const date = initialDate || new Date()
+      const date = initialDate ? new Date(initialDate) : new Date()
       if (!initialDate) {
         date.setHours(date.getHours() + 1, 0, 0, 0)
       }
-      const localIso = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16)
-      setScheduledAt(localIso)
+      setScheduledAt(getLocalDatetimeInputString(date))
       setPatientId('')
       setClinicId(activeClinics[0]?.id || '')
       setProcedureId(procedures[0]?.id || '')
@@ -184,8 +193,13 @@ export const AppointmentModal: React.FC<AppointmentModalProps> = ({
       return
     }
 
+    const scheduledIso = safeToIsoString(scheduledAt)
+    if (!scheduledIso) {
+      setErrorMessage('Por favor selecciona una fecha y hora válidas para la cita.')
+      return
+    }
+
     try {
-      const scheduledIso = new Date(scheduledAt).toISOString()
 
       if (isEditMode && appointmentToEdit) {
         await updateAppointment({

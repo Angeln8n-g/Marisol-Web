@@ -150,14 +150,38 @@ export const PatientCard: React.FC<PatientCardProps> = ({ patient, onEdit, onClo
             type="button"
             onClick={() => {
               onClose?.()
-              navigate(`/admin/medical-records?patient_id=${patient.id}`)
+              navigate(`/admin/medical-records?patient_id=${patient.id}&tab=clinical_exam`)
             }}
             className="w-full px-3 py-2 rounded-lg bg-navy text-gold text-xs font-semibold hover:bg-navy/90 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span>Ver Historial Médico</span>
+            <span>Ficha y Examen Clínico</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.()
+              navigate(`/admin/medical-records?patient_id=${patient.id}&tab=periodontogram`)
+            }}
+            className="w-full px-3 py-2 rounded-lg bg-sand/30 border border-gold/40 text-navy text-xs font-semibold hover:bg-gold/20 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <span>🦷</span>
+            <span>Periodontograma SEPA</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onClose?.()
+              navigate(`/admin/medical-records?patient_id=${patient.id}&tab=odontogram`)
+            }}
+            className="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-300 text-navy text-xs font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <span>🔍</span>
+            <span>Odontograma Digital</span>
           </button>
 
           <a

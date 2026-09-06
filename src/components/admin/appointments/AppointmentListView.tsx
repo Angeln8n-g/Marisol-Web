@@ -140,13 +140,25 @@ export const AppointmentListView: React.FC<AppointmentListViewProps> = ({
 
                     {/* Quick Invoice Button for Completed Appointments */}
                     {apt.status === 'completed' && onInvoice && (
-                      <button
-                        onClick={() => onInvoice(apt)}
-                        className="px-2.5 py-1 text-xs font-semibold text-white bg-gold rounded hover:bg-gold/90 transition-colors shadow-xs"
-                        title="Generar Factura"
-                      >
-                        Facturar
-                      </button>
+                      apt.billing_status === 'billed' || apt.invoice_id ? (
+                        <button
+                          type="button"
+                          onClick={() => onInvoice(apt)}
+                          className="px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-300 rounded hover:bg-emerald-100 transition-colors shadow-xs"
+                          title="Cita ya facturada. Clic para ver o imprimir comprobante."
+                        >
+                          Facturada
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onInvoice(apt)}
+                          className="px-2.5 py-1 text-xs font-semibold text-white bg-gold rounded hover:bg-gold/90 transition-colors shadow-xs"
+                          title="Generar Factura"
+                        >
+                          Facturar
+                        </button>
+                      )
                     )}
 
                     {/* Medical Record Shortcut */}

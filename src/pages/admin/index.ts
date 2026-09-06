@@ -10,5 +10,7 @@ export { LocationsPage } from './LocationsPage'
 export { NewLocationPage } from './NewLocationPage'
 export { EditLocationPage } from './EditLocationPage'
 export { AccountingPage } from './AccountingPage'
+export { BudgetsPage } from './BudgetsPage'
 export { InventoryPage } from './InventoryPage'
 export { MarketingPage } from './MarketingPage'
+
