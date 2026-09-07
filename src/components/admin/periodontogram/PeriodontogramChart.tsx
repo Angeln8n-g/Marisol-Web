@@ -10,6 +10,7 @@ import {
 import { PeriodontogramTooth } from './PeriodontogramTooth'
 import { PeriodontogramStatsPanel } from './PeriodontogramStatsPanel'
 import { SepaPeriodontogramSheet } from './SepaPeriodontogramSheet'
+import { PeriodontalOnlineExportModal } from './PeriodontalOnlineExportModal'
 import { usePeriodontograms } from '../../../hooks/usePeriodontograms'
 
 interface PeriodontogramChartProps {
@@ -33,6 +34,8 @@ export const PeriodontogramChart: React.FC<PeriodontogramChartProps> = ({ patien
   const [recordNotes, setRecordNotes] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+
 
   const currentRecord = periodontograms.find((p) => p.id === selectedRecordId) || periodontograms[0] || null
 
@@ -179,6 +182,16 @@ export const PeriodontogramChart: React.FC<PeriodontogramChartProps> = ({ patien
           >
             <span>🖨️</span>
             <span>Imprimir / Exportar PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            className="px-3.5 py-1.5 bg-teal-50 text-teal-800 hover:bg-teal-100 text-xs font-semibold rounded-lg transition-colors border border-teal-200 flex items-center gap-1.5 shadow-sm"
+            title="Generar enlace al visor interactivo de la Universidad de Berna y código QR para el paciente"
+          >
+            <span>🌐</span>
+            <span>Visor Online / QR</span>
           </button>
 
           <button
@@ -405,6 +418,16 @@ export const PeriodontogramChart: React.FC<PeriodontogramChartProps> = ({ patien
           </div>
         </div>
       )}
+
+      {/* Modal para exportar y visualizar en Periodontal Chart Online con Código QR */}
+      <PeriodontalOnlineExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        patient={patient}
+        teethData={teethData}
+        recordTitle={recordTitle}
+        examDate={currentRecord?.exam_date}
+      />
     </div>
   )
 }

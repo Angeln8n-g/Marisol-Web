@@ -320,7 +320,12 @@ export const MedicalRecordsPage: React.FC = () => {
                       {formError}
                     </div>
                   )}
-                  <MedicalRecordForm onSubmit={handleCreateRecord} isSubmitting={isCreating} onCancel={() => setShowForm(false)} />
+                  <MedicalRecordForm
+                    patient={patient}
+                    onSubmit={handleCreateRecord}
+                    isSubmitting={isCreating}
+                    onCancel={() => setShowForm(false)}
+                  />
                 </div>
               )}
 

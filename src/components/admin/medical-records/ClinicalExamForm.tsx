@@ -1,4 +1,10 @@
 import React, { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../../../lib/supabase'
+import {
+  preloadClinicalExamFromPatient,
+  extractPatientUpdatesFromClinicalExam,
+} from '../../../lib/medicalHistoryIntegration'
 import type {
   Patient,
   ChiefComplaintData,
@@ -17,6 +23,7 @@ interface ClinicalExamFormProps {
 }
 
 export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) => {
+  const queryClient = useQueryClient()
   const {
     examinations,
     createExamination,
@@ -32,9 +39,15 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
   const [isPrintMode, setIsPrintMode] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [syncWithPatient, setSyncWithPatient] = useState(true)
+  const [importNotice, setImportNotice] = useState<string | null>(null)
 
   // Current active examination or state for a new one
   const currentExam = examinations.find((e) => e.id === selectedExamId) || examinations[0] || null
+
+  // Helper para verificar si un historial médico tiene datos reales
+  const hasMedicalHistoryData = (mh?: MedicalHistoryData | null) =>
+    Boolean(mh && Object.values(mh).some((v) => Boolean(v && String(v).trim())))
 
   // Local form state
   const [formData, setFormData] = useState<{
@@ -45,79 +58,81 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
     periodontal_evaluation: PeriodontalEvaluationData
     patient_perception: PatientPerceptionData
     professional_exam: ProfessionalExamData
-  }>(() => ({
-    chief_complaint: currentExam?.chief_complaint || {
-      reason: '',
-      discomfort: '',
-      duration: '',
-      previous_treatments: '',
-    },
-    medical_history: currentExam?.medical_history || {
-      current_illnesses: '',
-      medications: '',
-      allergies: '',
-      surgeries_hospitalizations: '',
-      bleeding_healing_problems: '',
-      anesthesia_reactions: '',
-      pregnancy_status: '',
-    },
-    dental_history: currentExam?.dental_history || {
-      last_dental_visit: '',
-      gum_disease_history: '',
-      scaling_root_planing: '',
-      surgeries_implants_grafts: '',
-      pending_treatments: '',
-      pain_bleeding_mobility_sensitivity: '',
-      teeth_migration: '',
-    },
-    hygiene_habits: currentExam?.hygiene_habits || {
-      brushing_frequency: '2-3 veces al día',
-      floss_interdental: '',
-      mouthwash: '',
-      tobacco_use: 'No',
-      alcohol_consumption: 'Ocasional',
-      bruxism_parafunctions: '',
-    },
-    periodontal_evaluation: currentExam?.periodontal_evaluation || {
-      gum_bleeding: '',
-      gum_changes: '',
-      persistent_halitosis: '',
-      pus_secretion: 'No',
-      tooth_mobility: 'No',
-      teeth_spacing: 'No',
-      family_history_periodontal: '',
-    },
-    patient_perception: currentExam?.patient_perception || {
-      treatment_expectations: '',
-      areas_of_concern: '',
-      smile_improvements: '',
-    },
-    professional_exam: currentExam?.professional_exam || {
-      oral_hygiene_plaque: '',
-      dental_calculus: '',
-      gum_status: '',
-      bleeding_on_probing: '',
-      probing_depth_summary: '',
-      clinical_attachment_level: '',
-      recessions: '',
-      tooth_mobility: '',
-      furcation_involvement: '',
-      suppuration: '',
-      dental_migration: '',
-      mucosa_lesions: '',
-      occlusion_evaluation: '',
-      missing_teeth: '',
-      caries_restorations: '',
-      radiographs_cbct: '',
-      periodontal_diagnosis: '',
-      prognosis: '',
-      treatment_plan: '',
-    },
-  }))
+  }>(() => {
+    const preloaded = preloadClinicalExamFromPatient(patient)
+    const hasHistory = hasMedicalHistoryData(currentExam?.medical_history)
+
+    return {
+      chief_complaint: currentExam?.chief_complaint || {
+        reason: '',
+        discomfort: '',
+        duration: '',
+        previous_treatments: '',
+      },
+      medical_history: hasHistory ? currentExam!.medical_history : preloaded.medical_history,
+      dental_history: currentExam?.dental_history || {
+        last_dental_visit: '',
+        gum_disease_history: '',
+        scaling_root_planing: '',
+        surgeries_implants_grafts: '',
+        pending_treatments: '',
+        pain_bleeding_mobility_sensitivity: '',
+        teeth_migration: '',
+      },
+      hygiene_habits: currentExam?.hygiene_habits && currentExam.hygiene_habits.brushing_frequency
+        ? currentExam.hygiene_habits
+        : {
+            brushing_frequency: '2-3 veces al día',
+            floss_interdental: '',
+            mouthwash: '',
+            tobacco_use: preloaded.hygiene_habits.tobacco_use || 'No fuma',
+            alcohol_consumption: preloaded.hygiene_habits.alcohol_consumption || 'No / Ocasional',
+            bruxism_parafunctions: preloaded.hygiene_habits.bruxism_parafunctions || '',
+          },
+      periodontal_evaluation: currentExam?.periodontal_evaluation || {
+        gum_bleeding: '',
+        gum_changes: '',
+        persistent_halitosis: '',
+        pus_secretion: 'No',
+        tooth_mobility: 'No',
+        teeth_spacing: 'No',
+        family_history_periodontal: '',
+      },
+      patient_perception: currentExam?.patient_perception || {
+        treatment_expectations: '',
+        areas_of_concern: '',
+        smile_improvements: '',
+      },
+      professional_exam: currentExam?.professional_exam || {
+        oral_hygiene_plaque: '',
+        dental_calculus: '',
+        gum_status: '',
+        bleeding_on_probing: '',
+        probing_depth_summary: '',
+        clinical_attachment_level: '',
+        recessions: '',
+        tooth_mobility: '',
+        furcation_involvement: '',
+        suppuration: '',
+        dental_migration: '',
+        mucosa_lesions: '',
+        occlusion_evaluation: '',
+        missing_teeth: '',
+        caries_restorations: '',
+        radiographs_cbct: '',
+        periodontal_diagnosis: '',
+        prognosis: '',
+        treatment_plan: '',
+      },
+    }
+  })
 
   // Synchronize when switching exams
   React.useEffect(() => {
     if (currentExam) {
+      const preloaded = preloadClinicalExamFromPatient(patient)
+      const hasHistory = hasMedicalHistoryData(currentExam.medical_history)
+
       setFormData({
         chief_complaint: currentExam.chief_complaint || {
           reason: '',
@@ -125,15 +140,7 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
           duration: '',
           previous_treatments: '',
         },
-        medical_history: currentExam.medical_history || {
-          current_illnesses: '',
-          medications: '',
-          allergies: '',
-          surgeries_hospitalizations: '',
-          bleeding_healing_problems: '',
-          anesthesia_reactions: '',
-          pregnancy_status: '',
-        },
+        medical_history: hasHistory ? currentExam.medical_history : preloaded.medical_history,
         dental_history: currentExam.dental_history || {
           last_dental_visit: '',
           gum_disease_history: '',
@@ -143,21 +150,23 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
           pain_bleeding_mobility_sensitivity: '',
           teeth_migration: '',
         },
-        hygiene_habits: currentExam.hygiene_habits || {
-          brushing_frequency: '',
-          floss_interdental: '',
-          mouthwash: '',
-          tobacco_use: '',
-          alcohol_consumption: '',
-          bruxism_parafunctions: '',
-        },
+        hygiene_habits: currentExam.hygiene_habits && currentExam.hygiene_habits.brushing_frequency
+          ? currentExam.hygiene_habits
+          : {
+              brushing_frequency: '2-3 veces al día',
+              floss_interdental: '',
+              mouthwash: '',
+              tobacco_use: preloaded.hygiene_habits.tobacco_use || 'No fuma',
+              alcohol_consumption: preloaded.hygiene_habits.alcohol_consumption || 'No / Ocasional',
+              bruxism_parafunctions: preloaded.hygiene_habits.bruxism_parafunctions || '',
+            },
         periodontal_evaluation: currentExam.periodontal_evaluation || {
           gum_bleeding: '',
           gum_changes: '',
           persistent_halitosis: '',
-          pus_secretion: '',
-          tooth_mobility: '',
-          teeth_spacing: '',
+          pus_secretion: 'No',
+          tooth_mobility: 'No',
+          teeth_spacing: 'No',
           family_history_periodontal: '',
         },
         patient_perception: currentExam.patient_perception || {
@@ -190,6 +199,34 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
     }
   }, [currentExam])
 
+  const handleImportPatientAdmissionData = () => {
+    const preloaded = preloadClinicalExamFromPatient(patient)
+    setFormData((prev) => ({
+      ...prev,
+      medical_history: {
+        ...prev.medical_history,
+        current_illnesses: preloaded.medical_history.current_illnesses || prev.medical_history.current_illnesses,
+        medications: preloaded.medical_history.medications || prev.medical_history.medications,
+        allergies: preloaded.medical_history.allergies || prev.medical_history.allergies,
+        surgeries_hospitalizations: preloaded.medical_history.surgeries_hospitalizations || prev.medical_history.surgeries_hospitalizations,
+        anesthesia_reactions: preloaded.medical_history.anesthesia_reactions || prev.medical_history.anesthesia_reactions,
+        pregnancy_status:
+          preloaded.medical_history.pregnancy_status !== 'No refiere / No aplica'
+            ? preloaded.medical_history.pregnancy_status
+            : prev.medical_history.pregnancy_status,
+        additional_notes: preloaded.medical_history.additional_notes || prev.medical_history.additional_notes,
+      },
+      hygiene_habits: {
+        ...prev.hygiene_habits,
+        tobacco_use: preloaded.hygiene_habits.tobacco_use || prev.hygiene_habits.tobacco_use,
+        alcohol_consumption: preloaded.hygiene_habits.alcohol_consumption || prev.hygiene_habits.alcohol_consumption,
+        bruxism_parafunctions: preloaded.hygiene_habits.bruxism_parafunctions || prev.hygiene_habits.bruxism_parafunctions,
+      },
+    }))
+    setImportNotice('✓ Antecedentes y hábitos de admisión importados exitosamente.')
+    setTimeout(() => setImportNotice(null), 3500)
+  }
+
   const handleSave = async () => {
     setErrorMsg(null)
     try {
@@ -206,6 +243,29 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
         })
         setSelectedExamId(created.id)
       }
+
+      // Sincronizar automáticamente con la ficha maestra del paciente si está habilitado
+      if (syncWithPatient) {
+        const updates = extractPatientUpdatesFromClinicalExam(
+          formData.medical_history,
+          formData.hygiene_habits,
+          patient
+        )
+        const { error: patientUpdateErr } = await supabase
+          .from('patients')
+          .update({
+            medical_history: updates.medical_history,
+            medical_alerts: updates.medical_alerts,
+          } as never)
+          .eq('id', patient.id)
+
+        if (!patientUpdateErr) {
+          queryClient.invalidateQueries({ queryKey: ['patient', patient.id] })
+          queryClient.invalidateQueries({ queryKey: ['patient-detail', patient.id] })
+          queryClient.invalidateQueries({ queryKey: ['patients'] })
+        }
+      }
+
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (e) {
@@ -214,18 +274,11 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
   }
 
   const handleNewExam = () => {
+    const preloaded = preloadClinicalExamFromPatient(patient)
     setSelectedExamId(null)
     setFormData({
       chief_complaint: { reason: '', discomfort: '', duration: '', previous_treatments: '' },
-      medical_history: {
-        current_illnesses: '',
-        medications: '',
-        allergies: '',
-        surgeries_hospitalizations: '',
-        bleeding_healing_problems: '',
-        anesthesia_reactions: '',
-        pregnancy_status: '',
-      },
+      medical_history: preloaded.medical_history,
       dental_history: {
         last_dental_visit: '',
         gum_disease_history: '',
@@ -239,9 +292,9 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
         brushing_frequency: '2-3 veces al día',
         floss_interdental: '',
         mouthwash: '',
-        tobacco_use: 'No',
-        alcohol_consumption: 'No',
-        bruxism_parafunctions: '',
+        tobacco_use: preloaded.hygiene_habits.tobacco_use || 'No fuma',
+        alcohol_consumption: preloaded.hygiene_habits.alcohol_consumption || 'No / Ocasional',
+        bruxism_parafunctions: preloaded.hygiene_habits.bruxism_parafunctions || '',
       },
       periodontal_evaluation: {
         gum_bleeding: '',
@@ -341,6 +394,16 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
             </button>
           )}
 
+          <label className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] font-montserrat text-navy cursor-pointer hover:bg-gray-100 transition-colors select-none">
+            <input
+              type="checkbox"
+              checked={syncWithPatient}
+              onChange={(e) => setSyncWithPatient(e.target.checked)}
+              className="rounded text-gold focus:ring-gold"
+            />
+            <span>Sincronizar con ficha del paciente</span>
+          </label>
+
           <button
             type="button"
             onClick={handleSave}
@@ -352,9 +415,15 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
         </div>
       </div>
 
+      {importNotice && (
+        <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 text-xs rounded-lg font-montserrat flex items-center gap-2 animate-fadeIn">
+          <span>{importNotice}</span>
+        </div>
+      )}
+
       {saveSuccess && (
         <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg font-montserrat flex items-center gap-2">
-          <span>✓ Ficha clínica guardada exitosamente en el expediente.</span>
+          <span>✓ Ficha clínica guardada exitosamente {syncWithPatient ? 'y datos maestros del paciente sincronizados.' : 'en el expediente.'}</span>
         </div>
       )}
 
@@ -488,6 +557,31 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
               <p className="text-xs text-gray-500 font-montserrat">
                 Factores sistémicos que inciden directamente en la cicatrización y respuesta periodontal.
               </p>
+            </div>
+
+            {/* Banner de integración con datos de admisión del paciente */}
+            <div className="p-3 bg-sand/30 border border-gold/40 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs font-montserrat shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="text-base flex-shrink-0">📋</span>
+                <div>
+                  <span className="font-semibold text-navy">Antecedentes en Ficha del Paciente:</span>{' '}
+                  <span className="text-gray-700">
+                    {patient.medical_alerts ||
+                      (patient.medical_history && Object.values(patient.medical_history).some(Boolean)
+                        ? 'Registrados en admisión'
+                        : 'Sin antecedentes previos en admisión')}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleImportPatientAdmissionData}
+                className="px-3 py-1 bg-white border border-gold text-navy hover:bg-gold/15 rounded text-xs font-semibold transition-colors flex items-center gap-1.5 self-start sm:self-auto shadow-2xs"
+                title="Vuelve a cargar en el formulario los datos actuales de la ficha de admisión"
+              >
+                <span>⚡</span>
+                <span>Recargar datos de admisión</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-montserrat">
@@ -772,6 +866,30 @@ export const ClinicalExamForm: React.FC<ClinicalExamFormProps> = ({ patient }) =
                 Rutina diaria de higiene oral y factores conductuales de riesgo.
               </p>
             </div>
+
+            {(patient.medical_history?.smoker ||
+              patient.medical_history?.alcohol ||
+              patient.medical_history?.bruxism) && (
+              <div className="p-2.5 bg-blue-50/80 border border-blue-200 rounded-lg text-xs font-montserrat text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                <span>
+                  💡 <strong>Hábitos en admisión:</strong>{' '}
+                  {[
+                    patient.medical_history.smoker ? 'Fumador' : null,
+                    patient.medical_history.alcohol ? 'Consumo de alcohol' : null,
+                    patient.medical_history.bruxism ? 'Bruxismo / apretamiento' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleImportPatientAdmissionData}
+                  className="text-navy font-semibold hover:underline text-[11px] self-start sm:self-auto"
+                >
+                  Recargar hábitos
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs font-montserrat">
               <div>

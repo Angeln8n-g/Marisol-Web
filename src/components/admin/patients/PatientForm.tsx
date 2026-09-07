@@ -176,7 +176,7 @@ export const PatientForm: React.FC<PatientFormProps> = ({
               : 'border-transparent text-gray-500 hover:text-navy hover:border-gray-300'
           }`}
         >
-          <span>4. Anamnesis y Salud</span>
+          <span>4. Triage & Alertas de Salud</span>
           <span className="w-2 h-2 rounded-full bg-red-500" />
         </button>
       </div>
@@ -464,9 +464,17 @@ export const PatientForm: React.FC<PatientFormProps> = ({
         </div>
       )}
 
-      {/* Tab 4: Anamnesis y Salud */}
+      {/* Tab 4: Triage & Alertas de Salud */}
       {activeTab === 'anamnesis' && (
         <div className="space-y-5 animate-fadeIn">
+          {/* Banner explicativo de integración con el Historial Clínico */}
+          <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 font-montserrat flex items-start gap-2.5 shadow-2xs">
+            <span className="text-base flex-shrink-0">💡</span>
+            <div>
+              <strong>Triage Inicial de Admisión:</strong> Esta información activa de inmediato el semáforo de seguridad clínica y <strong>se transferirá automáticamente a la Ficha Clínica Odontológica</strong> del doctor, evitando tener que volver a interrogar al paciente sobre estos mismos datos en consulta.
+            </div>
+          </div>
+
           {/* Alertas Médicas Críticas */}
           <div>
             <label htmlFor="medical_alerts" className="block text-sm font-bold text-red-700 mb-1 flex items-center gap-1.5">

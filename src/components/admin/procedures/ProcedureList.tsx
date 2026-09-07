@@ -113,26 +113,26 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-xs">
+            <table className="w-full min-w-[820px] divide-y divide-gray-200">
+              <thead className="bg-gray-50/80 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Nombre</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Categoría</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Duración</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Rentabilidad Neta</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">Estado</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase">Acciones</th>
+                  <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nombre</th>
+                  <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Categoría</th>
+                  <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Duración</th>
+                  <th className="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Rentabilidad Neta</th>
+                  <th className="px-3 sm:px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 sm:px-5 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {procedures.map((proc) => {
                   const prof = profitabilityMap.get(proc.id)
                   return (
-                    <tr key={proc.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-navy">{proc.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{proc.category}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <tr key={proc.id} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm font-medium text-navy">{proc.name}</td>
+                      <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-gray-600">{proc.category}</td>
+                      <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm text-gray-600">
                         <div className="flex flex-col">
                           <span className="font-medium text-navy">
                             {proc.clinical_duration_minutes || proc.duration_minutes} min clínicos
@@ -149,7 +149,7 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-sm">
                         {prof ? (
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1.5">
@@ -176,7 +176,7 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                           <span className="text-xs text-gray-400">Sin datos</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 py-3.5 whitespace-nowrap text-center">
                         <button
                           onClick={() => toggleActive(proc.id, proc.is_active)}
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${
@@ -188,8 +188,8 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                           {proc.is_active ? 'Activo' : 'Inactivo'}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-4 sm:px-5 py-3.5 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-1.5 sm:gap-2">
                           <button
                             type="button"
                             onClick={() => {
@@ -200,7 +200,7 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                                 setProfitabilityModalProcedure(enriched)
                               }
                             }}
-                            className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1 shadow-2xs"
                             title="Simular rentabilidad y unit economics"
                           >
                             <span>💰 Margen</span>
@@ -208,7 +208,7 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                           <button
                             type="button"
                             onClick={() => setSuppliesModalProcedure(proc)}
-                            className="px-2.5 py-1 text-xs font-semibold text-navy bg-sand/40 hover:bg-sand/70 border border-gold/30 rounded-lg transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1 text-xs font-semibold text-navy bg-sand/60 hover:bg-sand/90 border border-gold/40 rounded-lg transition-colors flex items-center gap-1 shadow-2xs"
                             title="Configurar bandeja clínica de materiales y equipos"
                           >
                             <span>📦 Bandeja</span>
@@ -216,7 +216,7 @@ export const ProcedureList: React.FC<ProcedureListProps> = ({ onSimulateProfitab
                           <button
                             type="button"
                             onClick={() => setEditingProcedure(proc)}
-                            className="text-gold hover:text-gold/80 text-sm font-medium px-2 py-1"
+                            className="text-gold hover:text-gold/80 text-xs sm:text-sm font-semibold px-2 py-1 transition-colors"
                           >
                             Editar
                           </button>

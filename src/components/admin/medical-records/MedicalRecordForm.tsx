@@ -2,6 +2,8 @@ import React from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import type { Patient } from '../../../types'
+import { MedicalAlertBanner } from '../patients/MedicalAlertBanner'
 
 const recordSchema = z.object({
   chief_complaint: z.string().min(1, 'El motivo de consulta es requerido').max(1000),
@@ -14,6 +16,7 @@ const recordSchema = z.object({
 export type MedicalRecordFormValues = z.infer<typeof recordSchema>
 
 interface MedicalRecordFormProps {
+  patient?: Patient | null
   onSubmit: (data: MedicalRecordFormValues) => Promise<void>
   isSubmitting?: boolean
   onCancel?: () => void
@@ -21,6 +24,7 @@ interface MedicalRecordFormProps {
 }
 
 export const MedicalRecordForm: React.FC<MedicalRecordFormProps> = ({
+  patient,
   onSubmit,
   isSubmitting = false,
   onCancel,
@@ -44,6 +48,7 @@ export const MedicalRecordForm: React.FC<MedicalRecordFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+      {patient && <MedicalAlertBanner patient={patient} compact className="mb-4" />}
       <div>
         <label htmlFor="record_date" className="block text-sm font-medium text-navy mb-1.5">
           Fecha *

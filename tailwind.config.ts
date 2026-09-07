@@ -9,9 +9,12 @@ export default {
     extend: {
       colors: {
         cream: '#F8F5F0',
-        gold: '#72e436ff',
-        navy: '#048a04b2',
-        'navy-light': '#1a057aff',
+        'cream-dark': '#EFE9DF',
+        gold: '#C5A059',
+        'gold-light': '#DFCA88',
+        'gold-dark': '#9E7D3B',
+        navy: '#1B2A4A',
+        'navy-light': '#283D6A',
       },
       fontFamily: {
         'alex-brush': ['"Alex Brush"', 'cursive'],
