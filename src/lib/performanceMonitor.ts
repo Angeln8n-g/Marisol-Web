@@ -147,7 +147,7 @@ export function measure(name?: string) {
  * Monitorea el rendimiento de componentes React
  */
 export function logComponentRender(componentName: string, props?: any): void {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     console.log(`🔄 Render: ${componentName}`, props)
   }
 }
@@ -172,7 +172,7 @@ export function checkMemoryUsage(): void {
 }
 
 // Monitoreo automático en desarrollo
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   // Verificar memoria cada 30 segundos
   setInterval(checkMemoryUsage, 30000)
 }

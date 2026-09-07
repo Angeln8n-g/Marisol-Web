@@ -12,7 +12,7 @@ import { supabase } from '../lib/supabase'
  */
 export function useSessionTimeout() {
   const { session } = useAuthStore()
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!session) return

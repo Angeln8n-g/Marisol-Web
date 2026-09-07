@@ -286,7 +286,7 @@ describe('useClinicOperatingStatus', () => {
       const clinic = createMockClinic()
       const { unmount } = renderHook(() => useClinicOperatingStatus(clinic))
       
-      const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
+      const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
       
       unmount()
       
